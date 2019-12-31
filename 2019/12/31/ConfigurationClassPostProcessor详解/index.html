@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Spring boot源码阅读," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor  在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ConfigurationClassPostProcessor详解">
+<meta property="og:url" content="http://yoursite.com/2019/12/31/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor  在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时">
+<meta property="og:locale" content="zh">
+<meta property="og:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/ConfigurationClassPostProcessor_class_graph.png">
+<meta property="article:published_time" content="2019-12-31T09:11:35.000Z">
+<meta property="article:modified_time" content="2019-12-31T10:06:31.314Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="Spring boot源码阅读">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/ConfigurationClassPostProcessor_class_graph.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/12/31/ConfigurationClassPostProcessor详解/"/>
+
+
+
+
+
+  <title>ConfigurationClassPostProcessor详解 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/31/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">ConfigurationClassPostProcessor详解</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-31T17:11:35+08:00">
+                2019-12-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor</p>
+<p><img src="/Users/houfang/Documents/project/blog/source/_posts/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/ConfigurationClassPostProcessor_class_graph.png" alt="类图"></p>
+<p>在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时被加入到beanDefinitionNames这个保存着所有bean名字的数组里的。</p>
+<p>![image-20191231172007338](/Users/houfang/Library/Application Support/typora-user-images/image-20191231172007338.png)</p>
+<p>从这个调用栈，我们可以在springApplication的run方法里面找到createApplicationContext的方法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line">	 * Strategy method used to create the &#123;@link ApplicationContext&#125;. By default this</span><br><span class="line">	 * method will respect any explicitly set application context or application context</span><br><span class="line">	 * class before falling back to a suitable default.</span><br><span class="line">	 * @return the application context (not yet refreshed)</span><br><span class="line">	 * @see #setApplicationContextClass(Class)</span><br><span class="line">	 *&#x2F;</span><br><span class="line">	protected ConfigurableApplicationContext createApplicationContext() &#123;</span><br><span class="line">		Class&lt;?&gt; contextClass &#x3D; this.applicationContextClass;</span><br><span class="line">		if (contextClass &#x3D;&#x3D; null) &#123;</span><br><span class="line">			try &#123;</span><br><span class="line">				switch (this.webApplicationType) &#123;</span><br><span class="line">				case SERVLET:</span><br><span class="line">					contextClass &#x3D; Class.forName(DEFAULT_SERVLET_WEB_CONTEXT_CLASS);</span><br><span class="line">					break;</span><br><span class="line">				case REACTIVE:</span><br><span class="line">					contextClass &#x3D; Class.forName(DEFAULT_REACTIVE_WEB_CONTEXT_CLASS);</span><br><span class="line">					break;</span><br><span class="line">				default:</span><br><span class="line">					contextClass &#x3D; Class.forName(DEFAULT_CONTEXT_CLASS);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">			catch (ClassNotFoundException ex) &#123;</span><br><span class="line">				throw new IllegalStateException(</span><br><span class="line">						&quot;Unable create a default ApplicationContext, please specify an ApplicationContextClass&quot;, ex);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		return (ConfigurableApplicationContext) BeanUtils.instantiateClass(contextClass);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因为我们是一个web环境，所以我们的webApplicationType是SERVLET，因此contextClass是web.servlet.context.AnnotationConfigServletWebServerApplicationContext，最后会调用BeanUtils.instantiateClass(contextClass)来创建AnnotationConfigServletWebServerApplicationContext。在AnnotationConfigServletWebServerApplicationContext的构造函数里面，初始化了一个AnnotatedBeanDefinitionReader的reader和ClassPathBeanDefinitionScanner的scanner。继续跟进初始化AnnotatedBeanDefinitionReader的代码中去，不难找到下面的代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Set&lt;BeanDefinitionHolder&gt; <span class="title">registerAnnotationConfigProcessors</span><span class="params">(BeanDefinitionRegistry registry, @Nullable Object source)</span> </span>&#123;</span><br><span class="line">        DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);</span><br><span class="line">        <span class="keyword">if</span> (beanFactory != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!(beanFactory.getDependencyComparator() <span class="keyword">instanceof</span> AnnotationAwareOrderComparator)) &#123;</span><br><span class="line">                beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (!(beanFactory.getAutowireCandidateResolver() <span class="keyword">instanceof</span> ContextAnnotationAutowireCandidateResolver)) &#123;</span><br><span class="line">                beanFactory.setAutowireCandidateResolver(<span class="keyword">new</span> ContextAnnotationAutowireCandidateResolver());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Set&lt;BeanDefinitionHolder&gt; beanDefs = <span class="keyword">new</span> LinkedHashSet(<span class="number">8</span>);</span><br><span class="line">        RootBeanDefinition def;</span><br><span class="line">        <span class="keyword">if</span> (!registry.containsBeanDefinition(<span class="string">"org.springframework.context.annotation.internalConfigurationAnnotationProcessor"</span>)) &#123;</span><br><span class="line">            <span class="comment">// 判断当前context下是否有internalConfigurationAnnotationProcessor这个bean，如果没有，则创建一个RootBeanDefinition，指向ConfigurationClassPostProcessor</span></span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition(ConfigurationClassPostProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.annotation.internalConfigurationAnnotationProcessor"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!registry.containsBeanDefinition(<span class="string">"org.springframework.context.annotation.internalAutowiredAnnotationProcessor"</span>)) &#123;</span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition(AutowiredAnnotationBeanPostProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.annotation.internalAutowiredAnnotationProcessor"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (jsr250Present &amp;&amp; !registry.containsBeanDefinition(<span class="string">"org.springframework.context.annotation.internalCommonAnnotationProcessor"</span>)) &#123;</span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition(CommonAnnotationBeanPostProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.annotation.internalCommonAnnotationProcessor"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (jpaPresent &amp;&amp; !registry.containsBeanDefinition(<span class="string">"org.springframework.context.annotation.internalPersistenceAnnotationProcessor"</span>)) &#123;</span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                def.setBeanClass(ClassUtils.forName(<span class="string">"org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor"</span>, AnnotationConfigUtils<span class="class">.<span class="keyword">class</span>.<span class="title">getClassLoader</span>()))</span>;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException var6) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot load optional framework class: org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor"</span>, var6);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.annotation.internalPersistenceAnnotationProcessor"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!registry.containsBeanDefinition(<span class="string">"org.springframework.context.event.internalEventListenerProcessor"</span>)) &#123;</span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition(EventListenerMethodProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.event.internalEventListenerProcessor"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!registry.containsBeanDefinition(<span class="string">"org.springframework.context.event.internalEventListenerFactory"</span>)) &#123;</span><br><span class="line">            def = <span class="keyword">new</span> RootBeanDefinition(DefaultEventListenerFactory<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            def.setSource(source);</span><br><span class="line">            beanDefs.add(registerPostProcessor(registry, def, <span class="string">"org.springframework.context.event.internalEventListenerFactory"</span>));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> beanDefs;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法里面判断当前context下面是否有org.springframework.context.annotation.internalConfigurationAnnotationProcessor的bean的定义，没有的话新建一个bean definition，指向ConfigurationClassPostProcessor。最终这个bean definition会被保存在DefaultListableBeanFactory的beanDefinitionNames和beanDefinitionMap中去，有趣的是这次bean name是internalConfigurationAnnotationProcessor，而class name是ConfigurationClassPostProcessor。不过这个地方仅仅是保存进去还没有对这个类进行实例化。</p>
+<p>真正初始化是在AbstractApplicationContext的invokeBeanFactoryPostProcessors里面，这个方法比较长，这里就只挑选重要的地方讲解</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor<span class="class">.<span class="keyword">class</span>, <span class="title">true</span>, <span class="title">false</span>)</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这一行通过beanFactory取到了所有类型为BeanDefinitionRegistryPostProcessor.class的bean的名字，紧接着就调用getBean完成了这些bean的初始化。而ConfigurationClassPostProcessor实现了BeanDefinitionRegistryPostProcessor，所以ConfigurationClassPostProcessor在这个时候完成了初始化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor<span class="class">.<span class="keyword">class</span>, <span class="title">true</span>, <span class="title">false</span>)</span>;</span><br><span class="line">String[] var16 = postProcessorNames;</span><br><span class="line">var9 = postProcessorNames.length;</span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> var10;</span><br><span class="line">String ppName;</span><br><span class="line"><span class="keyword">for</span>(var10 = <span class="number">0</span>; var10 &lt; var9; ++var10) &#123;</span><br><span class="line">  ppName = var16[var10];</span><br><span class="line">  <span class="keyword">if</span> (beanFactory.isTypeMatch(ppName, PriorityOrdered<span class="class">.<span class="keyword">class</span>)) </span>&#123;</span><br><span class="line">    currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor<span class="class">.<span class="keyword">class</span>))</span>;</span><br><span class="line">    processedBeans.add(ppName);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>继续往后面看我们可以看到</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">invokeBeanFactoryPostProcessors((Collection)registryProcessors, (ConfigurableListableBeanFactory)beanFactory);</span><br></pre></td></tr></table></figure>
+
+<p>ConfigurationClassPostProcessor就保存在registryProcessors里面，这句话触发了ConfigurationClassPostProcessor的postProcess</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessBeanDefinitionRegistry</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> registryId = System.identityHashCode(registry);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.registriesPostProcessed.contains(registryId)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"postProcessBeanDefinitionRegistry already called on this post-processor against "</span> + registry);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.factoriesPostProcessed.contains(registryId)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"postProcessBeanFactory already called on this post-processor against "</span> + registry);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.registriesPostProcessed.add(registryId);</span><br><span class="line">            <span class="keyword">this</span>.processConfigBeanDefinitions(registry);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>终于到重头戏了processConfigBeanDefinitions</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processConfigBeanDefinitions</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        List&lt;BeanDefinitionHolder&gt; configCandidates = <span class="keyword">new</span> ArrayList();</span><br><span class="line">        String[] candidateNames = registry.getBeanDefinitionNames();</span><br><span class="line">        String[] var4 = candidateNames;</span><br><span class="line">        <span class="keyword">int</span> var5 = candidateNames.length;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> var6 = <span class="number">0</span>; var6 &lt; var5; ++var6) &#123;</span><br><span class="line">            String beanName = var4[var6];</span><br><span class="line">            BeanDefinition beanDef = registry.getBeanDefinition(beanName);</span><br><span class="line">            <span class="keyword">if</span> (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.logger.isDebugEnabled()) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.logger.debug(<span class="string">"Bean definition has already been processed as a configuration class: "</span> + beanDef);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, <span class="keyword">this</span>.metadataReaderFactory)) &#123;</span><br><span class="line">                configCandidates.add(<span class="keyword">new</span> BeanDefinitionHolder(beanDef, beanName));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!configCandidates.isEmpty()) &#123;</span><br><span class="line">            configCandidates.sort((bd1, bd2) -&gt; &#123;</span><br><span class="line">                <span class="keyword">int</span> i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());</span><br><span class="line">                <span class="keyword">int</span> i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());</span><br><span class="line">                <span class="keyword">return</span> Integer.compare(i1, i2);</span><br><span class="line">            &#125;);</span><br><span class="line">            SingletonBeanRegistry sbr = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (registry <span class="keyword">instanceof</span> SingletonBeanRegistry) &#123;</span><br><span class="line">                sbr = (SingletonBeanRegistry)registry;</span><br><span class="line">                <span class="keyword">if</span> (!<span class="keyword">this</span>.localBeanNameGeneratorSet) &#123;</span><br><span class="line">                    BeanNameGenerator generator = (BeanNameGenerator)sbr.getSingleton(<span class="string">"org.springframework.context.annotation.internalConfigurationBeanNameGenerator"</span>);</span><br><span class="line">                    <span class="keyword">if</span> (generator != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">this</span>.componentScanBeanNameGenerator = generator;</span><br><span class="line">                        <span class="keyword">this</span>.importBeanNameGenerator = generator;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.environment == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">this</span>.environment = <span class="keyword">new</span> StandardEnvironment();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            ConfigurationClassParser parser = <span class="keyword">new</span> ConfigurationClassParser(<span class="keyword">this</span>.metadataReaderFactory, <span class="keyword">this</span>.problemReporter, <span class="keyword">this</span>.environment, <span class="keyword">this</span>.resourceLoader, <span class="keyword">this</span>.componentScanBeanNameGenerator, registry);</span><br><span class="line">            Set&lt;BeanDefinitionHolder&gt; candidates = <span class="keyword">new</span> LinkedHashSet(configCandidates);</span><br><span class="line">            HashSet alreadyParsed = <span class="keyword">new</span> HashSet(configCandidates.size());</span><br><span class="line"></span><br><span class="line">            <span class="keyword">do</span> &#123;</span><br><span class="line">                parser.parse(candidates);</span><br><span class="line">                parser.validate();</span><br><span class="line">                Set&lt;ConfigurationClass&gt; configClasses = <span class="keyword">new</span> LinkedHashSet(parser.getConfigurationClasses());</span><br><span class="line">                configClasses.removeAll(alreadyParsed);</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.reader == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.reader = <span class="keyword">new</span> ConfigurationClassBeanDefinitionReader(registry, <span class="keyword">this</span>.sourceExtractor, <span class="keyword">this</span>.resourceLoader, <span class="keyword">this</span>.environment, <span class="keyword">this</span>.importBeanNameGenerator, parser.getImportRegistry());</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">this</span>.reader.loadBeanDefinitions(configClasses);</span><br><span class="line">                alreadyParsed.addAll(configClasses);</span><br><span class="line">                candidates.clear();</span><br><span class="line">                <span class="keyword">if</span> (registry.getBeanDefinitionCount() &gt; candidateNames.length) &#123;</span><br><span class="line">                    String[] newCandidateNames = registry.getBeanDefinitionNames();</span><br><span class="line">                    Set&lt;String&gt; oldCandidateNames = <span class="keyword">new</span> HashSet(Arrays.asList(candidateNames));</span><br><span class="line">                    Set&lt;String&gt; alreadyParsedClasses = <span class="keyword">new</span> HashSet();</span><br><span class="line">                    Iterator var12 = alreadyParsed.iterator();</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">while</span>(var12.hasNext()) &#123;</span><br><span class="line">                        ConfigurationClass configurationClass = (ConfigurationClass)var12.next();</span><br><span class="line">                        alreadyParsedClasses.add(configurationClass.getMetadata().getClassName());</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    String[] var23 = newCandidateNames;</span><br><span class="line">                    <span class="keyword">int</span> var24 = newCandidateNames.length;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">for</span>(<span class="keyword">int</span> var14 = <span class="number">0</span>; var14 &lt; var24; ++var14) &#123;</span><br><span class="line">                        String candidateName = var23[var14];</span><br><span class="line">                        <span class="keyword">if</span> (!oldCandidateNames.contains(candidateName)) &#123;</span><br><span class="line">                            BeanDefinition bd = registry.getBeanDefinition(candidateName);</span><br><span class="line">                            <span class="keyword">if</span> (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, <span class="keyword">this</span>.metadataReaderFactory) &amp;&amp; !alreadyParsedClasses.contains(bd.getBeanClassName())) &#123;</span><br><span class="line">                                candidates.add(<span class="keyword">new</span> BeanDefinitionHolder(bd, candidateName));</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    candidateNames = newCandidateNames;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">while</span>(!candidates.isEmpty());</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (sbr != <span class="keyword">null</span> &amp;&amp; !sbr.containsSingleton(IMPORT_REGISTRY_BEAN_NAME)) &#123;</span><br><span class="line">                sbr.registerSingleton(IMPORT_REGISTRY_BEAN_NAME, parser.getImportRegistry());</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.metadataReaderFactory <span class="keyword">instanceof</span> CachingMetadataReaderFactory) &#123;</span><br><span class="line">                ((CachingMetadataReaderFactory)<span class="keyword">this</span>.metadataReaderFactory).clearCache();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spring-boot%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" rel="tag"># Spring boot源码阅读</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/30/Bean%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/" rel="next" title="Bean 生命周期">
+                <i class="fa fa-chevron-left"></i> Bean 生命周期
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
