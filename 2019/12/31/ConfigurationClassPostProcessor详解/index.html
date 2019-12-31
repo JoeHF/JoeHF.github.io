@@ -79,16 +79,16 @@
 
 
 
-<meta name="description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor  在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时">
+<meta name="description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor">
 <meta property="og:type" content="article">
 <meta property="og:title" content="ConfigurationClassPostProcessor详解">
 <meta property="og:url" content="http://yoursite.com/2019/12/31/ConfigurationClassPostProcessor%E8%AF%A6%E8%A7%A3/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor  在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时">
+<meta property="og:description" content="今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor">
 <meta property="og:image" content="http://yoursite.com/images/ConfigurationClassPostProcessor_class_graph.png">
 <meta property="og:image" content="http://yoursite.com/images/ConfigurationClassPostProcessor_stack_trace.png">
 <meta property="article:published_time" content="2019-12-31T09:11:35.000Z">
-<meta property="article:modified_time" content="2019-12-31T11:41:57.802Z">
+<meta property="article:modified_time" content="2019-12-31T12:04:57.247Z">
 <meta property="article:author" content="Joe Hou">
 <meta property="article:tag" content="Spring boot源码阅读">
 <meta name="twitter:card" content="summary">
@@ -326,6 +326,8 @@
       
         <p>今天来讲解一下spring里的bean都是如何自动装载的，这里面涉及到一个很重要的类ConfigurationClassPostProcessor，这里盗用一个网络上的类图来展示ConfigurationClassPostProcessor</p>
 <p><img src="/images/ConfigurationClassPostProcessor_class_graph.png" alt="类图"></p>
+<a id="more"></a>
+
 <p>在深入介绍这个类之前，我们要先看一下这个ConfigurationClassPostProcessor本身是怎么被初始化的。我们先来看一下这个bean是何时被加入到beanDefinitionNames这个保存着所有bean名字的数组里的。</p>
 <p><img src="/images/ConfigurationClassPostProcessor_stack_trace.png" alt=""></p>
 <p>从这个调用栈，我们可以在springApplication的run方法里面找到createApplicationContext的方法</p>
