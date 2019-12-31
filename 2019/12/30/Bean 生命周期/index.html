@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT" />
+  <meta name="keywords" content="Spring boot源码阅读," />
 
 
 
@@ -81,15 +81,16 @@
 
 <meta name="description" content="最近有时间可以阅读spring boot的源码，就准备通过实践的方法写一系列的文章来阅读源代码。以前也断断续续看过spring的源码导读，但是我发现结合实践才能够吃透源代码中的细节，下面是一个特别简单的bean，也许不少人都写过，其实背后涉及到了很多源码的内容，那么通过阅读源代码我们就更能理解为什么我们要这么写而不只是按照网上的copy。 12345678910111213141516171819">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Bean 生命周期">
+<meta property="og:title" content="Bean生命周期">
 <meta property="og:url" content="http://yoursite.com/2019/12/30/Bean%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="最近有时间可以阅读spring boot的源码，就准备通过实践的方法写一系列的文章来阅读源代码。以前也断断续续看过spring的源码导读，但是我发现结合实践才能够吃透源代码中的细节，下面是一个特别简单的bean，也许不少人都写过，其实背后涉及到了很多源码的内容，那么通过阅读源代码我们就更能理解为什么我们要这么写而不只是按照网上的copy。 12345678910111213141516171819">
 <meta property="og:locale" content="zh">
 <meta property="og:image" content="http://yoursite.com/images/init_bean_image.png">
-<meta property="article:published_time" content="2019-12-30T13:13:52.527Z">
-<meta property="article:modified_time" content="2019-12-30T16:29:11.226Z">
+<meta property="article:published_time" content="2019-12-30T09:11:35.000Z">
+<meta property="article:modified_time" content="2019-12-31T11:41:54.290Z">
 <meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="Spring boot源码阅读">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://yoursite.com/images/init_bean_image.png">
 
@@ -127,7 +128,7 @@
 
 
 
-  <title>Bean 生命周期 | Hexo</title>
+  <title>Bean生命周期 | Hexo</title>
   
 
 
@@ -251,7 +252,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Bean 生命周期</h1>
+          <h1 class="post-title" itemprop="name headline">Bean生命周期</h1>
         
 
         <div class="post-meta">
@@ -263,7 +264,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-30T21:13:52+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-30T17:11:35+08:00">
                 2019-12-30
               </time>
             
@@ -273,6 +274,28 @@
             
           </span>
 
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/spring/" itemprop="url" rel="index">
+                    <span itemprop="name">spring</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
           
 
           
@@ -345,6 +368,12 @@
     
 
     <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spring-boot%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" rel="tag"># Spring boot源码阅读</a>
+          
+        </div>
       
 
       
@@ -438,15 +467,24 @@
             
 
             
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
 
             
               
               
               <div class="site-state-item site-state-tags">
-                
+                <a href="/tags/index.html">
                   <span class="site-state-item-count">1</span>
                   <span class="site-state-item-name">tags</span>
-                
+                </a>
               </div>
             
 
