@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Spring boot源码阅读," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前两天看了java如何做动态代理，包括jdk动态代理和CGLib动态代理，为了能够够好的理解spring的代码，今天就来试着分析一下ConfigurationClass是怎么做增强的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ConfigurationClass增强">
+<meta property="og:url" content="http://yoursite.com/2020/01/29/ConfigurationClass%E5%A2%9E%E5%BC%BA/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="前两天看了java如何做动态代理，包括jdk动态代理和CGLib动态代理，为了能够够好的理解spring的代码，今天就来试着分析一下ConfigurationClass是怎么做增强的。">
+<meta property="article:published_time" content="2020-01-29T03:44:20.000Z">
+<meta property="article:modified_time" content="2020-01-30T11:27:42.193Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="Spring boot源码阅读">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/01/29/ConfigurationClass增强/"/>
+
+
+
+
+
+  <title>ConfigurationClass增强 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/29/ConfigurationClass%E5%A2%9E%E5%BC%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">ConfigurationClass增强</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-01-29T11:44:20+08:00">
+                2020-01-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/spring/" itemprop="url" rel="index">
+                    <span itemprop="name">spring</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前两天看了java如何做动态代理，包括jdk动态代理和CGLib动态代理，为了能够够好的理解spring的代码，今天就来试着分析一下ConfigurationClass是怎么做增强的。</p>
+<a id="more"></a>
+
+<p>前面分析ConfigurationClassPostProcessor的时候提到过对于full的ConfigurationClass会被增强，具体是在PostProcessorRegistrationDelegate的invokeBeanFactoryPostProcessors被调用的，这里面会去BeanFactory找到所有的BeanDefinitionRegistryPostProcessor的后置处理器，分别调用他们的postProcessBeanFactory方法，对于ConfigurationClassPostProcessor来说，该方法的实现如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessBeanFactory</span><span class="params">(ConfigurableListableBeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> factoryId = System.identityHashCode(beanFactory);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.factoriesPostProcessed.contains(factoryId)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"postProcessBeanFactory already called on this post-processor against "</span> + beanFactory);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.factoriesPostProcessed.add(factoryId);</span><br><span class="line">            <span class="keyword">if</span> (!<span class="keyword">this</span>.registriesPostProcessed.contains(factoryId)) &#123;</span><br><span class="line">                <span class="keyword">this</span>.processConfigBeanDefinitions((BeanDefinitionRegistry)beanFactory);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">this</span>.enhanceConfigurationClasses(beanFactory);</span><br><span class="line">            beanFactory.addBeanPostProcessor(<span class="keyword">new</span> ConfigurationClassPostProcessor.ImportAwareBeanPostProcessor(beanFactory));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>enhanceConfigurationClasses方法里面会遍历BeanFactory的所有bean，根据BeanDef里的CONFIGURATION_CLASS_ATTRIBUTE判断是否是full，如果是full，则拿到BeanDef里的BeanClass，用enhancer增强，用增强的class替代原本的BeanClass</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">enhanceConfigurationClasses</span><span class="params">(ConfigurableListableBeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, AbstractBeanDefinition&gt; configBeanDefs = <span class="keyword">new</span> LinkedHashMap();</span><br><span class="line">        String[] var3 = beanFactory.getBeanDefinitionNames();</span><br><span class="line">        <span class="keyword">int</span> var4 = var3.length;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> var5 = <span class="number">0</span>; var5 &lt; var4; ++var5) &#123;</span><br><span class="line">            String beanName = var3[var5];</span><br><span class="line">            <span class="comment">// 遍历BeanFactory里的所有Bean</span></span><br><span class="line">            BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);</span><br><span class="line">            Object configClassAttr = beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE);</span><br><span class="line">            MethodMetadata methodMetadata = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (beanDef <span class="keyword">instanceof</span> AnnotatedBeanDefinition) &#123;</span><br><span class="line">                methodMetadata = ((AnnotatedBeanDefinition)beanDef).getFactoryMethodMetadata();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> ((configClassAttr != <span class="keyword">null</span> || methodMetadata != <span class="keyword">null</span>) &amp;&amp; beanDef <span class="keyword">instanceof</span> AbstractBeanDefinition) &#123;</span><br><span class="line">                AbstractBeanDefinition abd = (AbstractBeanDefinition)beanDef;</span><br><span class="line">                <span class="keyword">if</span> (!abd.hasBeanClass()) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        abd.resolveBeanClass(<span class="keyword">this</span>.beanClassLoader);</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Throwable var12) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot load configuration class: "</span> + beanDef.getBeanClassName(), var12);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 判断configClassAttribute是不是full，是full的放进configBeanDefs的map里</span></span><br><span class="line">            <span class="keyword">if</span> (<span class="string">"full"</span>.equals(configClassAttr)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!(beanDef <span class="keyword">instanceof</span> AbstractBeanDefinition)) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> BeanDefinitionStoreException(<span class="string">"Cannot enhance @Configuration bean definition '"</span> + beanName + <span class="string">"' since it is not stored in an AbstractBeanDefinition subclass"</span>);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.logger.isInfoEnabled() &amp;&amp; beanFactory.containsSingleton(beanName)) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.logger.info(<span class="string">"Cannot enhance @Configuration bean definition '"</span> + beanName + <span class="string">"' since its singleton instance has been created too early. The typical cause is a non-static @Bean method with a BeanDefinitionRegistryPostProcessor return type: Consider declaring such methods as 'static'."</span>);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                configBeanDefs.put(beanName, (AbstractBeanDefinition)beanDef);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!configBeanDefs.isEmpty()) &#123;</span><br><span class="line">            ConfigurationClassEnhancer enhancer = <span class="keyword">new</span> ConfigurationClassEnhancer();</span><br><span class="line">            Iterator var14 = configBeanDefs.entrySet().iterator();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span>(var14.hasNext()) &#123;</span><br><span class="line">                Entry&lt;String, AbstractBeanDefinition&gt; entry = (Entry)var14.next();</span><br><span class="line">                AbstractBeanDefinition beanDef = (AbstractBeanDefinition)entry.getValue();</span><br><span class="line">                beanDef.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);</span><br><span class="line">                Class&lt;?&gt; configClass = beanDef.getBeanClass();</span><br><span class="line">                <span class="comment">// 用增强的class代替原来的class</span></span><br><span class="line">                Class&lt;?&gt; enhancedClass = enhancer.enhance(configClass, <span class="keyword">this</span>.beanClassLoader);</span><br><span class="line">                <span class="keyword">if</span> (configClass != enhancedClass) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (<span class="keyword">this</span>.logger.isTraceEnabled()) &#123;</span><br><span class="line">                        <span class="keyword">this</span>.logger.trace(String.format(<span class="string">"Replacing bean definition '%s' existing class '%s' with enhanced class '%s'"</span>, entry.getKey(), configClass.getName(), enhancedClass.getName()));</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    beanDef.setBeanClass(enhancedClass);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来我们看一下增强类ConfigurationClassEnhancer</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CALLBACKS = <span class="keyword">new</span> Callback[]&#123;<span class="keyword">new</span> ConfigurationClassEnhancer.BeanMethodInterceptor(), <span class="keyword">new</span> ConfigurationClassEnhancer.BeanFactoryAwareMethodInterceptor(), NoOp.INSTANCE&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>一共设置了两个callback，所以每次在调用configurationClass的方法都会被BeanMethodInterceptor和BeanFactoryAwareMethodInterceptor截获。先来看一下BeanMethodInterceptor的intercept方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Object <span class="title">intercept</span><span class="params">(Object enhancedConfigInstance, Method beanMethod, Object[] beanMethodArgs, MethodProxy cglibMethodProxy)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">    ConfigurableBeanFactory beanFactory = <span class="keyword">this</span>.getBeanFactory(enhancedConfigInstance);</span><br><span class="line">    String beanName = BeanAnnotationHelper.determineBeanNameFor(beanMethod);</span><br><span class="line">    <span class="comment">//查看beanMethod有没有注解标记ScopedProxy，如果有的话找到scoped bean name</span></span><br><span class="line">    <span class="keyword">if</span> (BeanAnnotationHelper.isScopedProxy(beanMethod)) &#123;</span><br><span class="line">        String scopedBeanName = ScopedProxyCreator.getTargetBeanName(beanName);</span><br><span class="line">        <span class="keyword">if</span> (beanFactory.isCurrentlyInCreation(scopedBeanName)) &#123;</span><br><span class="line">            beanName = scopedBeanName;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//判断有没有同名的工厂bean</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.factoryContainsBean(beanFactory, <span class="string">"&amp;"</span> + beanName) &amp;&amp; <span class="keyword">this</span>.factoryContainsBean(beanFactory, beanName)) &#123;</span><br><span class="line">        Object factoryBean = beanFactory.getBean(<span class="string">"&amp;"</span> + beanName);</span><br><span class="line">        <span class="keyword">if</span> (!(factoryBean <span class="keyword">instanceof</span> ScopedProxyFactoryBean)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.enhanceFactoryBean(factoryBean, beanMethod.getReturnType(), beanFactory, beanName);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.isCurrentlyInvokedFactoryMethod(beanMethod)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (ConfigurationClassEnhancer.logger.isInfoEnabled() &amp;&amp; BeanFactoryPostProcessor<span class="class">.<span class="keyword">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanMethod</span>.<span class="title">getReturnType</span>())) </span>&#123;</span><br><span class="line">            ConfigurationClassEnhancer.logger.info(String.format(<span class="string">"@Bean method %s.%s is non-static and returns an object assignable to Spring's BeanFactoryPostProcessor interface. This will result in a failure to process annotations such as @Autowired, @Resource and @PostConstruct within the method's declaring @Configuration class. Add the 'static' modifier to this method to avoid these container lifecycle issues; see @Bean javadoc for complete details."</span>, beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName()));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.resolveBeanReference(beanMethod, beanMethodArgs, beanFactory, beanName);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我写了如下的代码进行测试</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@ComponentScan</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppConfig</span> </span>&#123;</span><br><span class="line">   </span><br><span class="line">  <span class="meta">@Bean</span>(name = <span class="string">"userBean2"</span>)</span><br><span class="line">  <span class="function"><span class="keyword">public</span> UserBean <span class="title">getUserBean2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    UserBean userBean = <span class="keyword">new</span> UserBean(<span class="string">"hou"</span>, <span class="number">28</span>);</span><br><span class="line">    <span class="keyword">return</span> userBean;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Bean</span>(name = <span class="string">"userBean1"</span>)</span><br><span class="line">  <span class="function"><span class="keyword">public</span> FactoryBean <span class="title">getUserBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> FactoryBean&lt;UserBean&gt;() &#123;</span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> UserBean <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> UserBean(<span class="string">"houfang"</span>, <span class="number">28</span>);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="keyword">public</span> Class&lt;?&gt; getObjectType() &#123;</span><br><span class="line">        <span class="keyword">return</span> UserBean<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在intercept方法里会被拦截到创建这两个bean，但是都不会进入第二个if条件判断，虽然beanfactory有这个bean，但是在判断的时候还会去看这个bean是不是正在被创建，通过断点我们看到userBean1和userBean2都在创建中，所以最后会调用到cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs)即会调用被代理对象的相应方法。</p>
+<p>我们修改测试程序如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@ComponentScan</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppConfig</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Bean</span>(name = <span class="string">"userBeanName"</span>)</span><br><span class="line">  <span class="function"><span class="keyword">public</span> String <span class="title">name</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    FactoryBean factoryBean = getUserBean();</span><br><span class="line">    UserBean userBean = (UserBean) factoryBean.getObject();</span><br><span class="line">    Class&lt;?&gt; objectType = factoryBean.getObjectType();</span><br><span class="line">    <span class="keyword">return</span> userBean.getName();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Bean</span>(name = <span class="string">"userBean2"</span>)</span><br><span class="line">  <span class="function"><span class="keyword">public</span> UserBean <span class="title">getUserBean2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    UserBean userBean = <span class="keyword">new</span> UserBean(<span class="string">"hou"</span>, <span class="number">28</span>);</span><br><span class="line">    <span class="keyword">return</span> userBean;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Bean</span>(name = <span class="string">"userBean1"</span>)</span><br><span class="line">  <span class="function"><span class="keyword">public</span> FactoryBean <span class="title">getUserBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> FactoryBean&lt;UserBean&gt;() &#123;</span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> UserBean <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> UserBean(<span class="string">"houfang"</span>, <span class="number">28</span>);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="keyword">public</span> Class&lt;?&gt; getObjectType() &#123;</span><br><span class="line">        <span class="keyword">return</span> UserBean<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在这段测试代码里加了另外一个bean userBeanName，同样会被BeanMethodInterceptor intercept，会同样地运行到cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs); 这里就会调用测试代码里的getUserBean，由于增强类的存在，这个方法也会被代理类截获，这个时候被截获的beanName是userBean1，这个bean是在beanFactory存在但并没有在创建中所以会进入到下面代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="keyword">this</span>.factoryContainsBean(beanFactory, <span class="string">"&amp;"</span> + beanName) &amp;&amp; <span class="keyword">this</span>.factoryContainsBean(beanFactory, beanName)) &#123;</span><br><span class="line">    Object factoryBean = beanFactory.getBean(<span class="string">"&amp;"</span> + beanName);</span><br><span class="line">    <span class="keyword">if</span> (!(factoryBean <span class="keyword">instanceof</span> ScopedProxyFactoryBean)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.enhanceFactoryBean(factoryBean, beanMethod.getReturnType(), beanFactory, beanName);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>enhanceFactoryBean最后会调用到createCglibProxyForFactoryBean</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Object <span class="title">createCglibProxyForFactoryBean</span><span class="params">(Object factoryBean, ConfigurableBeanFactory beanFactory, String beanName)</span> </span>&#123;</span><br><span class="line">    Enhancer enhancer = <span class="keyword">new</span> Enhancer();</span><br><span class="line">    enhancer.setSuperclass(factoryBean.getClass());</span><br><span class="line">    enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);</span><br><span class="line">    enhancer.setCallbackType(MethodInterceptor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">    Class&lt;?&gt; fbClass = enhancer.createClass();</span><br><span class="line">    Object fbProxy = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (ConfigurationClassEnhancer.objenesis.isWorthTrying()) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            fbProxy = ConfigurationClassEnhancer.objenesis.newInstance(fbClass, enhancer.getUseCache());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ObjenesisException var9) &#123;</span><br><span class="line">            ConfigurationClassEnhancer.logger.debug(<span class="string">"Unable to instantiate enhanced FactoryBean using Objenesis, falling back to regular construction"</span>, var9);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fbProxy == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            fbProxy = ReflectionUtils.accessibleConstructor(fbClass, <span class="keyword">new</span> Class[<span class="number">0</span>]).newInstance();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable var8) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unable to instantiate enhanced FactoryBean using Objenesis, and regular FactoryBean instantiation via default constructor fails as well"</span>, var8);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ((Factory)fbProxy).setCallback(<span class="number">0</span>, (obj, method, args, proxy) -&gt; &#123;</span><br><span class="line">        <span class="keyword">return</span> method.getName().equals(<span class="string">"getObject"</span>) &amp;&amp; args.length == <span class="number">0</span> ? beanFactory.getBean(beanName) : proxy.invoke(factoryBean, args);</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> fbProxy;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们可以看到这里又会创建一个代理对象来增强测试代码里面用getUserBean得到的工厂bean，intercept方法里面只有一条语句</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> method.getName().equals(<span class="string">"getObject"</span>) &amp;&amp; args.length == <span class="number">0</span> ? beanFactory.getBean(beanName) : proxy.invoke(factoryBean, args);</span><br></pre></td></tr></table></figure>
+
+<p>所以测试代码中关于factoryBean的方法调用都会执行到这个语句，比如</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">UserBean userBean = (UserBean) factoryBean.getObject();</span><br></pre></td></tr></table></figure>
+
+<p>就会满足判断语句而直接从beanFactory获得了userBean1这个bean，也就是</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> <span class="keyword">new</span> UserBean(<span class="string">"houfang"</span>, <span class="number">28</span>);</span><br></pre></td></tr></table></figure>
+
+<p>而</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Class&lt;?&gt; objectType = factoryBean.getObjectType();</span><br></pre></td></tr></table></figure>
+
+<p>会执行</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">proxy.invoke(factoryBean, args);</span><br></pre></td></tr></table></figure>
+
+<p>也就是测试代码中的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; getObjectType() &#123;</span><br><span class="line">  <span class="keyword">return</span> UserBean<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当然这种用法是比较少见的，更多的是利用工厂bean来创建复杂的对象，那为什么</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Resource</span>(name = <span class="string">"userBean1"</span>)</span><br><span class="line">  <span class="keyword">private</span> UserBean userBean1;</span><br></pre></td></tr></table></figure>
+
+<p>得到的是UserBean而不是这个bean返回的工厂bean呢，这是因为在引入bean的时候会调用到AbstractBeanFactory的getObjectForBeanInstance</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Object <span class="title">getObjectForBeanInstance</span><span class="params">(Object beanInstance, String name, String beanName, @Nullable RootBeanDefinition mbd)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//首先判断bean名字是不是FactoryBean，也就是以&amp;开头的beanName</span></span><br><span class="line">        <span class="keyword">if</span> (BeanFactoryUtils.isFactoryDereference(name)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (beanInstance <span class="keyword">instanceof</span> NullBean) &#123;</span><br><span class="line">                <span class="keyword">return</span> beanInstance;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!(beanInstance <span class="keyword">instanceof</span> FactoryBean)) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> BeanIsNotAFactoryException(beanName, beanInstance.getClass());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (mbd != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    mbd.isFactoryBean = <span class="keyword">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">return</span> beanInstance;</span><br><span class="line">            &#125;</span><br><span class="line">        <span class="comment">// 判断beanInstance是不是FactotyBean</span></span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!(beanInstance <span class="keyword">instanceof</span> FactoryBean)) &#123;</span><br><span class="line">            <span class="keyword">return</span> beanInstance;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            Object object = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (mbd != <span class="keyword">null</span>) &#123;</span><br><span class="line">                mbd.isFactoryBean = <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                object = <span class="keyword">this</span>.getCachedObjectForFactoryBean(beanName);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (object == <span class="keyword">null</span>) &#123;</span><br><span class="line">                FactoryBean&lt;?&gt; factory = (FactoryBean)beanInstance;</span><br><span class="line">                <span class="keyword">if</span> (mbd == <span class="keyword">null</span> &amp;&amp; <span class="keyword">this</span>.containsBeanDefinition(beanName)) &#123;</span><br><span class="line">                    mbd = <span class="keyword">this</span>.getMergedLocalBeanDefinition(beanName);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">boolean</span> synthetic = mbd != <span class="keyword">null</span> &amp;&amp; mbd.isSynthetic();</span><br><span class="line">                object = <span class="keyword">this</span>.getObjectFromFactoryBean(factory, beanName, !synthetic);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> object;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果前两个判断都没有成功就会调用getObjectFromFactoryBean，从而最终调用到FactoryBean的getObject方法。</p>
+<p>就此我们看到了动态代理在configurationClass里的用法，虽然不是很复杂但是分析起来还是有点绕的，并且通过这个分析更加明了了工厂bean的用法和原理。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spring-boot%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" rel="tag"># Spring boot源码阅读</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/26/CGLib%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/" rel="next" title="CGLib动态代理">
+                <i class="fa fa-chevron-left"></i> CGLib动态代理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
