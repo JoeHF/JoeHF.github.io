@@ -320,115 +320,15 @@
 
       
         
-          
-            <p>在java中synchronized关键字是同步锁，同步锁依赖于对象而存在，每一个对象有且仅有一个锁。</p>
-<p>原理</p>
-<p>synchronized使用的锁对象存储在java对象头里，jvm采用2个字节来存储对象头（对象数组会用3个字节，其中一个字节存储数组长度）。两个字节由Mark Word和Class Metadata Address组成。</p>
-<table>
-<thead>
-<tr>
-<th>虚拟机位数</th>
-<th>头对象结构</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>32/64bit</td>
-<td>Mark Word</td>
-<td>存储对象的hashCode、锁信息或分代年龄或GC标志等信息</td>
-</tr>
-<tr>
-<td>32/64bit</td>
-<td>Class Metadata Address</td>
-<td>类型指针指向对象的类元数据，JVM通过这个指针确定该对象是哪个类的实例。</td>
-</tr>
-</tbody></table>
-<p>默认情况下Mark Word存储着对象hashCode、分代年龄、锁标记位</p>
-<table>
-<thead>
-<tr>
-<th>锁状态</th>
-<th>25bit</th>
-<th>4bit</th>
-<th>1bit 是否是偏向锁</th>
-<th>2bit锁标志位</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>无锁状态</td>
-<td>对象HashCode</td>
-<td>对象分代年龄</td>
-<td>0</td>
-<td>01</td>
-</tr>
-</tbody></table>
-<p>对象头是与对象本身无关系的数据结构，jvm考虑到空间效率，Mark Word的格式是非固定的，当在有锁状态下会有如下变化的结构</p>
-<table>
-<thead>
-<tr>
-<th>锁状态</th>
-<th>25bit</th>
-<th>4bit</th>
-<th>1bit 是否是偏向锁</th>
-<th>2bit锁标志位</th>
-</tr>
-</thead>
-<tbody><tr>
-<td></td>
-<td>| 23bit | 2bit |</td>
-<td></td>
-<td>是否是偏向锁</td>
-<td>锁标志位</td>
-</tr>
-<tr>
-<td>轻量级锁</td>
-<td>指向栈中锁记录的指针</td>
-<td></td>
-<td></td>
-<td>00</td>
-</tr>
-<tr>
-<td>重量级锁</td>
-<td>指向互斥量（重量级锁）的指针</td>
-<td></td>
-<td></td>
-<td>10</td>
-</tr>
-<tr>
-<td>GC标记</td>
-<td>空</td>
-<td></td>
-<td></td>
-<td>11</td>
-</tr>
-<tr>
-<td>偏向锁</td>
-<td>| 线程ID | Epoch |</td>
-<td>对象分代年龄</td>
-<td>1</td>
-<td>01</td>
-</tr>
-</tbody></table>
-<p>重量级锁</p>
-<p>先讨论java最早期的重量级锁，锁标识位为10，指针指向monitor对象的起始地址，每个对象都存在一个monitor与之关联，但当一个monitor被某个线程持有后，它便处于锁定状态。Monitor对象有个计数器表明该monitor对象是否已经被一个线程锁占据，多个线程竞争同一对象的monitor对象时便会去检查monitor对象的计数器。</p>
-<p>对于synchronized修饰的同步代码块，底层的实现是在同步代码块的头部和尾部加上monitorenter和monitorexit指令，当执行到monitorenter会检查monitor对象的持有权。如果是synchronized方法，则jvm可以从方法常量池中的方法表结构中的ACC_SYNCHRONIZED访问标志来区分是否是同步方法。在方法调用时会检查该标志位来去试图获得monitor对象。</p>
-<p>早期java版本中，monitor对象依赖于操作系统的mutex lock来实现，而操作系统实现线程切换需要用户态到核心态的转化，时间成本高，所以才引入了轻量级锁和偏向锁来进行优化</p>
-<p>JVM对synchronized的优化</p>
-<p>从上面的表格可以知道锁的状态有四种，无锁状态、偏向锁、轻量级锁、重量级锁。随着锁的竞争，锁可以从偏向锁升级到轻量级锁，再升级到重量级锁，但是锁的升级是单向的。</p>
-<p>偏向锁</p>
-<p>在大多数情况下，锁不仅不存在多线程竞争，而且总是由同一个线程多次获得。偏向锁的核心思想是如果一个线程获得了锁，那么锁就进入了偏向模式，此时Mark Word的结构也变为偏向锁结构。当这个线程再次请求锁时，无需再做任何同步操作。但是当多个线程申请锁时，偏向锁就失效了，会升级到轻量级锁</p>
-<p>轻量级锁</p>
-<p>轻量级锁能够提升程序性能的依据是“对绝大部分的锁，在整个同步周期内都不存在竞争”，注意这是经验数据。需要了解的是，轻量级锁所适应的场景是线程交替执行同步块的场合，如果存在同一时间访问同一锁的场合，就会导致轻量级锁膨胀为重量级锁。</p>
-<p>自旋锁</p>
-<p>虚拟机为了避免线程真实地在操作系统层面挂起，还会进行一项称为自旋锁的优化手段。这是基于在大多数情况下，线程持有锁的时间都不会太长，如果直接挂起操作系统层面的线程可能会得不偿失，毕竟操作系统实现线程之间的切换时需要从用户态转换到核心态，这个状态之间的转换需要相对比较长的时间，时间成本相对较高，因此自旋锁会假设在不久将来，当前的线程可以获得锁，因此虚拟机会让当前想要获取锁的线程做几个空循环(这也是称为自旋的原因)，一般不会太久，可能是50个循环或100循环，在经过若干次循环后，如果得到锁，就顺利进入临界区。如果还不能获得锁，那就会将线程在操作系统层面挂起，这就是自旋锁的优化方式，这种方式确实也是可以提升效率的。</p>
-<p>等待唤醒机制与synchronized<br>所谓等待唤醒机制本篇主要指的是notify/notifyAll和wait方法，在使用这3个方法时，必须处于synchronized代码块或者synchronized方法中，否则就会抛出IllegalMonitorStateException异常，这是因为调用这几个方法前必须拿到当前对象的监视器monitor对象，也就是说notify/notifyAll和wait方法依赖于monitor对象，在前面的分析中，我们知道monitor 存在于对象头的Mark Word 中(存储monitor引用指针)，而synchronized关键字可以获取 monitor ，这也就是为什么notify/notifyAll和wait方法必须在synchronized代码块或者synchronized方法调用的原因。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">synchronized</span> (obj) &#123;</span><br><span class="line">  obj.wait();</span><br><span class="line">  obj.notify();</span><br><span class="line">  obj.notifyAll();         </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>需要特别理解的一点是，与sleep方法不同的是wait方法调用完成后，线程将被暂停，但wait方法将会释放当前持有的监视器锁(monitor)，直到有线程调用notify/notifyAll方法后方能继续执行，而sleep方法只让线程休眠并不释放锁。同时notify/notifyAll方法调用后，并不会马上释放监视器锁，而是在相应的synchronized(){}/synchronized方法执行结束后才自动释放锁。</p>
-<p>Reference:</p>
-<p><a href="https://blog.csdn.net/javazejian/article/details/72828483" target="_blank" rel="noopener">https://blog.csdn.net/javazejian/article/details/72828483</a></p>
-
-          
+          <p>[toc]</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>synchronized使用的锁对象存储在java对象头里，jvm采用2个字节来存储对象头（对象数组会用3个字节，其中一个字节存储数组长度）。两个字节由Mark Word和Class Metadata Address组成。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2020/04/10/synchronized%E8%AF%A6%E8%A7%A3/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -821,8 +721,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/" itemprop="url" rel="index">
-                    <span itemprop="name">动态代理</span>
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
                   </a>
                 </span>
 
@@ -1113,8 +1013,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/" itemprop="url" rel="index">
-                    <span itemprop="name">动态代理</span>
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
                   </a>
                 </span>
 
@@ -1553,7 +1453,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">3</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
