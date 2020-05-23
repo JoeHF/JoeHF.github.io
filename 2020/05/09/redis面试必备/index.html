@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="面试," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="疫情导致各大旅游公司业绩不佳，纷纷裁员，我们公司也难以独善其身，庆幸公司裁员名单里没有我，但是这个疫情不散去我们就不能过于乐观。如果下半年还不能有所好转，我们也还是有再次裁员的风险，所以也得慢慢开始准备面试了。 公司里面不是各种技术栈都能接触到，但在现在互联网的面试中却免不了这部分的面试。因为没办法像之前那样全部看源代码来讲解，所以之后的面试标签下的文章都是会以总结网上相关文档，包括官网，网友总结">
+<meta property="og:type" content="article">
+<meta property="og:title" content="redis面试必备">
+<meta property="og:url" content="http://yoursite.com/2020/05/09/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="疫情导致各大旅游公司业绩不佳，纷纷裁员，我们公司也难以独善其身，庆幸公司裁员名单里没有我，但是这个疫情不散去我们就不能过于乐观。如果下半年还不能有所好转，我们也还是有再次裁员的风险，所以也得慢慢开始准备面试了。 公司里面不是各种技术栈都能接触到，但在现在互联网的面试中却免不了这部分的面试。因为没办法像之前那样全部看源代码来讲解，所以之后的面试标签下的文章都是会以总结网上相关文档，包括官网，网友总结">
+<meta property="og:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/1.png">
+<meta property="article:published_time" content="2020-05-09T13:40:04.000Z">
+<meta property="article:modified_time" content="2020-05-14T15:10:20.688Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/09/redis面试必备/"/>
+
+
+
+
+
+  <title>redis面试必备 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/09/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">redis面试必备</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-09T21:40:04+08:00">
+                2020-05-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/redis/" itemprop="url" rel="index">
+                    <span itemprop="name">redis</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>疫情导致各大旅游公司业绩不佳，纷纷裁员，我们公司也难以独善其身，庆幸公司裁员名单里没有我，但是这个疫情不散去我们就不能过于乐观。如果下半年还不能有所好转，我们也还是有再次裁员的风险，所以也得慢慢开始准备面试了。</p>
+<p>公司里面不是各种技术栈都能接触到，但在现在互联网的面试中却免不了这部分的面试。因为没办法像之前那样全部看源代码来讲解，所以之后的面试标签下的文章都是会以总结网上相关文档，包括官网，网友总结的部分，源代码以及自己的理解来写，一篇文章里将会囊括一个完整的知识点。</p>
+<p>今天这篇讲解Redis</p>
+<a id="more"></a>
+
+<h2 id="Redis-io多路复用原理"><a href="#Redis-io多路复用原理" class="headerlink" title="Redis io多路复用原理"></a>Redis io多路复用原理</h2><p>io多路复用用途很广泛，这种模式也称为<strong>Reactor</strong>模式，多路复用是在将文件描述符注册到io多路复用函数中时，同时也需要保存当这个文件描述符被激活时的回调函数。在c语言中就是函数指针。</p>
+<p>Linux提供了三种io复用函数select, poll, epoll</p>
+<ol>
+<li>select是早期Linux引入的io复用函数，底层采用轮询的方法判断每个文件描述符是否被激活。所谓轮询就是一遍遍的遍历，依次判断每一个文件描述符的状态，效率可想而知，慢</li>
+<li>poll是在select之后引入的，使用方法上稍微简单于select，但是仍然没有摆脱轮询带来的问题<br>epoll作为轮询的终结者，底层没有采用轮询的方法，而是基于事件回调的。简单的说，就是在内核中当文件描述符</li>
+<li>激活时都会调用一个回调函数，epoll根据回调函数直接定位文件描述符，极大提高了效率，同时也减轻了CPU的负担，不用一遍遍轮询</li>
+</ol>
+<p>Redis对底层调用进行了一层封装</p>
+<p>包括创建epoll(epoll_create)，注册事件(epoll_ctl)，删除事件(epoll_ctl)，阻塞监听(epoll_wait)等</p>
+<p>以aeApiState为例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/ae_epoll.c</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 创建一个新的 epoll 实例，并将它赋值给 eventLoop</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">aeApiCreate</span><span class="params">(aeEventLoop *eventLoop)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    aeApiState *state = zmalloc(<span class="keyword">sizeof</span>(aeApiState));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!state) <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化事件槽空间</span></span><br><span class="line">    state-&gt;events = zmalloc(<span class="keyword">sizeof</span>(struct epoll_event)*eventLoop-&gt;setsize);</span><br><span class="line">    <span class="keyword">if</span> (!state-&gt;events) &#123;</span><br><span class="line">        zfree(state);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 创建 epoll 实例</span></span><br><span class="line">    state-&gt;epfd = epoll_create(<span class="number">1024</span>); <span class="comment">/* 1024 is just a hint for the kernel */</span></span><br><span class="line">    <span class="keyword">if</span> (state-&gt;epfd == <span class="number">-1</span>) &#123;</span><br><span class="line">        zfree(state-&gt;events);</span><br><span class="line">        zfree(state);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 赋值给 eventLoop</span></span><br><span class="line">    eventLoop-&gt;apidata = state;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Redis启动时间驱动循环是在./src/redis.c的main函数里面</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> **argv)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  aeMain(server.el);</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 事件处理器的主循环</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">aeMain</span><span class="params">(aeEventLoop *eventLoop)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    eventLoop-&gt;<span class="built_in">stop</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (!eventLoop-&gt;<span class="built_in">stop</span>) &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 如果有需要在事件处理前执行的函数，那么运行它</span></span><br><span class="line">        <span class="keyword">if</span> (eventLoop-&gt;beforesleep != <span class="literal">NULL</span>)</span><br><span class="line">            eventLoop-&gt;beforesleep(eventLoop);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 开始处理事件</span></span><br><span class="line">        aeProcessEvents(eventLoop, AE_ALL_EVENTS);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>aeProcessEvents里的内容也很好理解</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Process every pending time event, then every pending file event</span></span><br><span class="line"><span class="comment"> * (that may be registered by time event callbacks just processed).</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 处理所有已到达的时间事件，以及所有已就绪的文件事件。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Without special flags the function sleeps until some file event</span></span><br><span class="line"><span class="comment"> * fires, or when the next time event occurs (if any).</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 如果不传入特殊 flags 的话，那么函数睡眠直到文件事件就绪，</span></span><br><span class="line"><span class="comment"> * 或者下个时间事件到达（如果有的话）。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * If flags is 0, the function does nothing and returns.</span></span><br><span class="line"><span class="comment"> * 如果 flags 为 0 ，那么函数不作动作，直接返回。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * if flags has AE_ALL_EVENTS set, all the kind of events are processed.</span></span><br><span class="line"><span class="comment"> * 如果 flags 包含 AE_ALL_EVENTS ，所有类型的事件都会被处理。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * if flags has AE_FILE_EVENTS set, file events are processed.</span></span><br><span class="line"><span class="comment"> * 如果 flags 包含 AE_FILE_EVENTS ，那么处理文件事件。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * if flags has AE_TIME_EVENTS set, time events are processed.</span></span><br><span class="line"><span class="comment"> * 如果 flags 包含 AE_TIME_EVENTS ，那么处理时间事件。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * if flags has AE_DONT_WAIT set the function returns ASAP until all</span></span><br><span class="line"><span class="comment"> * the events that's possible to process without to wait are processed.</span></span><br><span class="line"><span class="comment"> * 如果 flags 包含 AE_DONT_WAIT ，</span></span><br><span class="line"><span class="comment"> * 那么函数在处理完所有不许阻塞的事件之后，即刻返回。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * The function returns the number of events processed.</span></span><br><span class="line"><span class="comment"> * 函数的返回值为已处理事件的数量</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="function"><span class="keyword">int</span> <span class="title">aeProcessEvents</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">int</span> flags)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> processed = <span class="number">0</span>, numevents;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Nothing to do? return ASAP */</span></span><br><span class="line">    <span class="keyword">if</span> (!(flags &amp; AE_TIME_EVENTS) &amp;&amp; !(flags &amp; AE_FILE_EVENTS)) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Note that we want call select() even if there are no</span></span><br><span class="line"><span class="comment">     * file events to process as long as we want to process time</span></span><br><span class="line"><span class="comment">     * events, in order to sleep until the next time event is ready</span></span><br><span class="line"><span class="comment">     * to fire. */</span></span><br><span class="line">    <span class="keyword">if</span> (eventLoop-&gt;maxfd != <span class="number">-1</span> ||</span><br><span class="line">        ((flags &amp; AE_TIME_EVENTS) &amp;&amp; !(flags &amp; AE_DONT_WAIT))) &#123;</span><br><span class="line">        <span class="keyword">int</span> j;</span><br><span class="line">        aeTimeEvent *shortest = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">tv</span>, *<span class="title">tvp</span>;</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 获取最近的时间事件</span></span><br><span class="line">        <span class="keyword">if</span> (flags &amp; AE_TIME_EVENTS &amp;&amp; !(flags &amp; AE_DONT_WAIT))</span><br><span class="line">            shortest = aeSearchNearestTimer(eventLoop);</span><br><span class="line">        <span class="keyword">if</span> (shortest) &#123;</span><br><span class="line">            <span class="comment">// 如果时间事件存在的话</span></span><br><span class="line">            <span class="comment">// 那么根据最近可执行时间事件和现在时间的时间差来决定文件事件的阻塞时间</span></span><br><span class="line">            <span class="keyword">long</span> now_sec, now_ms;</span><br><span class="line"></span><br><span class="line">            <span class="comment">/* Calculate the time missing for the nearest</span></span><br><span class="line"><span class="comment">             * timer to fire. */</span></span><br><span class="line">            <span class="comment">// 计算距今最近的时间事件还要多久才能达到</span></span><br><span class="line">            <span class="comment">// 并将该时间距保存在 tv 结构中</span></span><br><span class="line">            aeGetTime(&amp;now_sec, &amp;now_ms);</span><br><span class="line">            tvp = &amp;tv;</span><br><span class="line">            tvp-&gt;tv_sec = shortest-&gt;when_sec - now_sec;</span><br><span class="line">            <span class="keyword">if</span> (shortest-&gt;when_ms &lt; now_ms) &#123;</span><br><span class="line">                tvp-&gt;tv_usec = ((shortest-&gt;when_ms+<span class="number">1000</span>) - now_ms)*<span class="number">1000</span>;</span><br><span class="line">                tvp-&gt;tv_sec --;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                tvp-&gt;tv_usec = (shortest-&gt;when_ms - now_ms)*<span class="number">1000</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 时间差小于 0 ，说明事件已经可以执行了，将秒和毫秒设为 0 （不阻塞）</span></span><br><span class="line">            <span class="keyword">if</span> (tvp-&gt;tv_sec &lt; <span class="number">0</span>) tvp-&gt;tv_sec = <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">if</span> (tvp-&gt;tv_usec &lt; <span class="number">0</span>) tvp-&gt;tv_usec = <span class="number">0</span>;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 执行到这一步，说明没有时间事件</span></span><br><span class="line">            <span class="comment">// 那么根据 AE_DONT_WAIT 是否设置来决定是否阻塞，以及阻塞的时间长度</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">/* If we have to check for events but need to return</span></span><br><span class="line"><span class="comment">             * ASAP because of AE_DONT_WAIT we need to set the timeout</span></span><br><span class="line"><span class="comment">             * to zero */</span></span><br><span class="line">            <span class="keyword">if</span> (flags &amp; AE_DONT_WAIT) &#123;</span><br><span class="line">                <span class="comment">// 设置文件事件不阻塞</span></span><br><span class="line">                tv.tv_sec = tv.tv_usec = <span class="number">0</span>;</span><br><span class="line">                tvp = &amp;tv;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">/* Otherwise we can block */</span></span><br><span class="line">                <span class="comment">// 文件事件可以阻塞直到有事件到达为止</span></span><br><span class="line">                tvp = <span class="literal">NULL</span>; <span class="comment">/* wait forever */</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 处理文件事件，阻塞时间由 tvp 决定</span></span><br><span class="line">        numevents = aeApiPoll(eventLoop, tvp);</span><br><span class="line">        <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; numevents; j++) &#123;</span><br><span class="line">            <span class="comment">// 从已就绪数组中获取事件</span></span><br><span class="line">            aeFileEvent *fe = &amp;eventLoop-&gt;events[eventLoop-&gt;fired[j].fd];</span><br><span class="line"></span><br><span class="line">            <span class="keyword">int</span> mask = eventLoop-&gt;fired[j].mask;</span><br><span class="line">            <span class="keyword">int</span> fd = eventLoop-&gt;fired[j].fd;</span><br><span class="line">            <span class="keyword">int</span> rfired = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">           <span class="comment">/* note the fe-&gt;mask &amp; mask &amp; ... code: maybe an already processed</span></span><br><span class="line"><span class="comment">             * event removed an element that fired and we still didn't</span></span><br><span class="line"><span class="comment">             * processed, so we check if the event is still valid. */</span></span><br><span class="line">            <span class="comment">// 读事件</span></span><br><span class="line">            <span class="keyword">if</span> (fe-&gt;mask &amp; mask &amp; AE_READABLE) &#123;</span><br><span class="line">                <span class="comment">// rfired 确保读/写事件只能执行其中一个</span></span><br><span class="line">                rfired = <span class="number">1</span>;</span><br><span class="line">                fe-&gt;rfileProc(eventLoop,fd,fe-&gt;clientData,mask);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 写事件</span></span><br><span class="line">            <span class="keyword">if</span> (fe-&gt;mask &amp; mask &amp; AE_WRITABLE) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!rfired || fe-&gt;wfileProc != fe-&gt;rfileProc)</span><br><span class="line">                    fe-&gt;wfileProc(eventLoop,fd,fe-&gt;clientData,mask);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            processed++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">     <span class="comment">/* Check time events */</span></span><br><span class="line">    <span class="comment">// 执行时间事件</span></span><br><span class="line">    <span class="keyword">if</span> (flags &amp; AE_TIME_EVENTS)</span><br><span class="line">        processed += processTimeEvents(eventLoop);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> processed; <span class="comment">/* return the number of processed file/time events */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="发布订阅"><a href="#发布订阅" class="headerlink" title="发布订阅"></a>发布订阅</h2><p>发布订阅功能比较简单，只需要将每个频道以及它的订阅者记录在字典里，如果客户端向某个频道发送消息，则在字典中查找该频道的所有订阅者，依次将消息发送过去即可。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">.<span class="comment">//src/redis.h</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">client</span> &#123;</span></span><br><span class="line">    ...</span><br><span class="line">    dict *pubsub_channels; </span><br><span class="line">    ...</span><br><span class="line">&#125; client;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisServer</span> &#123;</span></span><br><span class="line">    ...</span><br><span class="line">    dict *pubsub_channels;  </span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><h3 id="对象的类型和编码"><a href="#对象的类型和编码" class="headerlink" title="对象的类型和编码"></a>对象的类型和编码</h3><p>Redis用对象来表示数据库的键和值，当新创建一个键值对时，至少会创建两个对象：键对象和值对象，每个对象由一个RedisObject表示</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span></span><br><span class="line">    <span class="keyword">unsigned</span> type:<span class="number">4</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> encoding:<span class="number">4</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> lru:LRU_BITS; <span class="comment">/* LRU time (relative to global lru_clock) or</span></span><br><span class="line"><span class="comment">                            * LFU data (least significant 8 bits frequency</span></span><br><span class="line"><span class="comment">                            * and most significant 16 bits access time). */</span></span><br><span class="line">    <span class="keyword">int</span> refcount;</span><br><span class="line">    <span class="keyword">void</span> *ptr;</span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
+
+<p>type是类型，encoding是编码方式，ptr指向实际的内存空间。</p>
+<p>type有：REDIS_STRING,REDIS_LIST,REDIS_HASH,REDIS_SET,REDIS_ZSET</p>
+<p>接下来分析各种类型的时候再分析编码方式这个字段</p>
+<h3 id="字符串对象"><a href="#字符串对象" class="headerlink" title="字符串对象"></a>字符串对象</h3><p>字符串对象的编码可以是int,raw或者embstr</p>
+<ul>
+<li>如果一个字符串对象保存的是整数值，并且这个整数值可以用long表示，那么ptr实际是指向long的指针</li>
+<li>如果是字符串且字符串长度大于32字节，那么用sds来保存这个字符串值，并将对象的编码设置为raw</li>
+<li>如果是字符串且字符串长度小于等于32字节，那么会用embstr编码</li>
+</ul>
+<p><strong>embstr和raw一样都使用redisObject和sdshdr结构来表示字符串对象，但raw编码会调用两次内存分配函数来分别创建redisObject和sdshdr结构，而embstr则调用一次内存分配来分配一块连续的空间，空间中依次包含redisObject和sdshdr两个结构，因此embstr具有只需要分配和释放依次内存的优势，并且embstr是连续空间，能够更好利用缓存</strong></p>
+<p><strong>可以用long double类型表示的浮点数在redis也是用字符串值来保存</strong></p>
+<h3 id="列表对象"><a href="#列表对象" class="headerlink" title="列表对象"></a>列表对象</h3><p>列表对象的编码是ziplist或者linkedlist</p>
+<p>ziplist使用压缩列表来实现，linkedlist使用双端列表实现</p>
+<p><strong>列表对象保存的所有字符串元素的长度都小于64字节并且保存的元素数量小于512个时使用ziplist，否则使用linkedlist</strong></p>
+<h3 id="哈希对象"><a href="#哈希对象" class="headerlink" title="哈希对象"></a>哈希对象</h3><p>哈希对象的编码是ziplist或者hashtable</p>
+<p>ziplist编码的哈希对象使用压缩列表作为底层实现，每当有新的键值对要加入到哈希对象时，程序会先将键的压缩列表节点推入到压缩列表表尾，然后再将值的压缩列表节点推入到压缩列表表尾</p>
+<p><strong>保存同一键值对的两个节点挨在一起，键在前值在后，先加入的键值对放在压缩列表的表头位置，后加入的放进表尾</strong></p>
+<p>hashtable编码的哈希对象使用字典作为底层实现</p>
+<p><strong>当哈希对象所有键值对的键和值的字符串长度都小于64字节并且哈希对象保存的键值对数量小于512个时使用ziplist否则使用hastable</strong></p>
+<h4 id="字典的实现"><a href="#字典的实现" class="headerlink" title="字典的实现"></a>字典的实现</h4><p>Redis我们可以当做一个k-v数据库，键key是以字符串形式存在，value可以是多种类型。Redis的数据库结构定义在./src/redis.h。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    dict *dict;    <span class="comment">/* 保存键值对的字典 */</span>    </span><br><span class="line">    <span class="keyword">int</span> id;        <span class="comment">/* 数据库唯一id */</span>   </span><br><span class="line">    ...</span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
+
+<p>字典相关的数据结构都定义在./src/dict.h里</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 字典</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dict</span> &#123;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 类型特定函数</span></span><br><span class="line">    dictType *type;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 私有数据</span></span><br><span class="line">    <span class="keyword">void</span> *privdata;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 哈希表</span></span><br><span class="line">    dictht ht[<span class="number">2</span>];</span><br><span class="line"></span><br><span class="line">    <span class="comment">// rehash 索引</span></span><br><span class="line">    <span class="comment">// 当 rehash 不在进行时，值为 -1</span></span><br><span class="line">    <span class="keyword">int</span> rehashidx; <span class="comment">/* rehashing not in progress if rehashidx == -1 */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 目前正在运行的安全迭代器的数量</span></span><br><span class="line">    <span class="keyword">int</span> iterators; <span class="comment">/* number of iterators currently running */</span></span><br><span class="line"></span><br><span class="line">&#125; dict;</span><br><span class="line"><span class="comment">/* This is our hash table structure. Every dictionary has two of this as we</span></span><br><span class="line"><span class="comment"> * implement incremental rehashing, for the old to the new table. */</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 哈希表</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 每个字典都使用两个哈希表，从而实现渐进式 rehash 。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictht</span> &#123;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 哈希表数组</span></span><br><span class="line">    dictEntry **table;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 哈希表大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="built_in">size</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 哈希表大小掩码，用于计算索引值</span></span><br><span class="line">    <span class="comment">// 总是等于 size - 1</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> sizemask;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 该哈希表已有节点的数量</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> used;</span><br><span class="line"></span><br><span class="line">&#125; dictht;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 哈希表节点</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> &#123;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 键</span></span><br><span class="line">    <span class="keyword">void</span> *key;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 值</span></span><br><span class="line">    <span class="keyword">union</span> &#123;</span><br><span class="line">        <span class="keyword">void</span> *val;</span><br><span class="line">        <span class="keyword">uint64_t</span> u64;</span><br><span class="line">        <span class="keyword">int64_t</span> s64;</span><br><span class="line">    &#125; v;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 指向下个哈希表节点，形成链表</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> *<span class="title">next</span>;</span></span><br><span class="line"></span><br><span class="line">&#125; dictEntry;</span><br></pre></td></tr></table></figure>
+
+<h4 id="rehash的实现"><a href="#rehash的实现" class="headerlink" title="rehash的实现"></a>rehash的实现</h4><p>Redis会在两种情况对字典进行rehash操作</p>
+<ul>
+<li>字典中哈希节点数量过多，导致在同一个下标下查找某个键的时间边长，需要扩大字典容量</li>
+<li>字典中哈希节点数量过少，导致很多位置处于空缺，占用大量空缺内存，需要缩小字典容量</li>
+</ul>
+<p>rehash的方法是先确定扩充或缩小的哈希表大小，然后为ht[1]申请内存空间，最后将rehashidx设置成0，标志着开始执行rehash操作。每当对数据库进行增删改查时，都会先判断当前是否处于rehash状态，如果是，那么就执行一次rehash，这样的好处是将rehash带来的时间空间消耗分摊给了每一个对数据库的操作。而如果采用直接将全部的数据rehash到ht[1]，那么当数据量很大时，rehash执行时间会很长，服务器很可能被阻塞。<br>当Redis发现此时正处于rehash操作时，会执行rehash函数。不过Redis不是一次将ht[0]中所有的数据全部移动到ht[1]，而是仅仅移动一小部分。Redis采用N步渐进式执行rehash操作，即每次移动ht[0]N个下标的数据到ht[1]中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Performs N steps of incremental rehashing. Returns 1 if there are still</span></span><br><span class="line"><span class="comment"> * keys to move from the old to the new hash table, otherwise 0 is returned.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 执行 N 步渐进式 rehash 。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回 1 表示仍有键需要从 0 号哈希表移动到 1 号哈希表，</span></span><br><span class="line"><span class="comment"> * 返回 0 则表示所有键都已经迁移完毕。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Note that a rehashing step consists in moving a bucket (that may have more</span></span><br><span class="line"><span class="comment"> * than one key as we use chaining) from the old to the new hash table.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 注意，每步 rehash 都是以一个哈希表索引（桶）作为单位的，</span></span><br><span class="line"><span class="comment"> * 一个桶里可能会有多个节点，</span></span><br><span class="line"><span class="comment"> * 被 rehash 的桶里的所有节点都会被移动到新哈希表。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * T = O(N)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">dictRehash</span><span class="params">(dict *d, <span class="keyword">int</span> n)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 只可以在 rehash 进行中时执行</span></span><br><span class="line">    <span class="keyword">if</span> (!dictIsRehashing(d)) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 进行 N 步迁移</span></span><br><span class="line">    <span class="comment">// T = O(N)</span></span><br><span class="line">    <span class="keyword">while</span>(n--) &#123;</span><br><span class="line">        dictEntry *de, *nextde;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Check if we already rehashed the whole table... */</span></span><br><span class="line">        <span class="comment">// 如果 0 号哈希表为空，那么表示 rehash 执行完毕</span></span><br><span class="line">        <span class="comment">// T = O(1)</span></span><br><span class="line">        <span class="keyword">if</span> (d-&gt;ht[<span class="number">0</span>].used == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 释放 0 号哈希表</span></span><br><span class="line">            zfree(d-&gt;ht[<span class="number">0</span>].table);</span><br><span class="line">            <span class="comment">// 将原来的 1 号哈希表设置为新的 0 号哈希表</span></span><br><span class="line">            d-&gt;ht[<span class="number">0</span>] = d-&gt;ht[<span class="number">1</span>];</span><br><span class="line">            <span class="comment">// 重置旧的 1 号哈希表</span></span><br><span class="line">            _dictReset(&amp;d-&gt;ht[<span class="number">1</span>]);</span><br><span class="line">            <span class="comment">// 关闭 rehash 标识</span></span><br><span class="line">            d-&gt;rehashidx = <span class="number">-1</span>;</span><br><span class="line">            <span class="comment">// 返回 0 ，向调用者表示 rehash 已经完成</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">         <span class="comment">/* Note that rehashidx can't overflow as we are sure there are more</span></span><br><span class="line"><span class="comment">         * elements because ht[0].used != 0 */</span></span><br><span class="line">        <span class="comment">// 确保 rehashidx 没有越界</span></span><br><span class="line">        assert(d-&gt;ht[<span class="number">0</span>].<span class="built_in">size</span> &gt; (<span class="keyword">unsigned</span>)d-&gt;rehashidx);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 略过数组中为空的索引，找到下一个非空索引</span></span><br><span class="line">        <span class="keyword">while</span>(d-&gt;ht[<span class="number">0</span>].table[d-&gt;rehashidx] == <span class="literal">NULL</span>) d-&gt;rehashidx++;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 指向该索引的链表表头节点</span></span><br><span class="line">        de = d-&gt;ht[<span class="number">0</span>].table[d-&gt;rehashidx];</span><br><span class="line">        <span class="comment">/* Move all the keys in this bucket from the old to the new hash HT */</span></span><br><span class="line">        <span class="comment">// 将链表中的所有节点迁移到新哈希表</span></span><br><span class="line">        <span class="comment">// T = O(1)</span></span><br><span class="line">        <span class="keyword">while</span>(de) &#123;</span><br><span class="line">            <span class="keyword">unsigned</span> <span class="keyword">int</span> h;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 保存下个节点的指针</span></span><br><span class="line">            nextde = de-&gt;next;</span><br><span class="line"></span><br><span class="line">            <span class="comment">/* Get the index in the new hash table */</span></span><br><span class="line">            <span class="comment">// 计算新哈希表的哈希值，以及节点插入的索引位置</span></span><br><span class="line">            h = dictHashKey(d, de-&gt;key) &amp; d-&gt;ht[<span class="number">1</span>].sizemask;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 插入节点到新哈希表</span></span><br><span class="line">            de-&gt;next = d-&gt;ht[<span class="number">1</span>].table[h];</span><br><span class="line">            d-&gt;ht[<span class="number">1</span>].table[h] = de;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 更新计数器</span></span><br><span class="line">            d-&gt;ht[<span class="number">0</span>].used--;</span><br><span class="line">            d-&gt;ht[<span class="number">1</span>].used++;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 继续处理下个节点</span></span><br><span class="line">            de = nextde;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 将刚迁移完的哈希表索引的指针设为空</span></span><br><span class="line">        d-&gt;ht[<span class="number">0</span>].table[d-&gt;rehashidx] = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="comment">// 更新 rehash 索引</span></span><br><span class="line">        d-&gt;rehashidx++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>rehashidx记录着当前rehash的进度，即从哈希表ht[0]的rehashidx位置开始移动数据到ht[1]中(每次移动完成后都会更改rehashidx)</li>
+<li>rehash的步骤是先获取ht[0]中rehashidx位置的哈希节点链表，将这个链表中所有哈希节点代表的键值对重新计算哈希值，添加到ht[1]中，然后从ht[0]中删除</li>
+<li>每步移动一个下标下的整个链表，总共执行n步</li>
+<li>如果已经将ht[0]的所有数据移动到ht[1]中，就释放ht[0]，将ht[1]作为ht[0]，然后重置ht[1]，将rehashidx设置为-1标志不再执行rehash操作</li>
+</ul>
+<h3 id="集合对象"><a href="#集合对象" class="headerlink" title="集合对象"></a>集合对象</h3><p>集合对象的编码可以是intset或者hashtable</p>
+<p>intset编码的集合对象使用整数集合作为底层实现，hashtable编码的集合对象使用字典作为底层实现</p>
+<p><strong>集合对象保存所有元素都是整数值，并且数量不超过512个时用intset，其余情况使用hashtable</strong></p>
+<h3 id="有序集合对象"><a href="#有序集合对象" class="headerlink" title="有序集合对象"></a>有序集合对象</h3><p>有序集合的编码可以是ziplist或者skiplist</p>
+<p>ziplist每一个集合对象使用两个紧挨在一起的压缩列表节点来保存，第一个节点保存元素的成员，第二个节点保存元素的分数。集合元素按分值从小到大进行排序。</p>
+<p>skiplist编码的有序集合对象使用zset结构作为底层实现，zset结构包含一个字典和一个跳跃表，跳跃表节点的Object属性保存了元素成员，score属性保存了元素的分值。通过跳跃表，程序可以对有序集合进行范围性操作，比如zrank，zrange等命令就是基于跳跃表api来实现的，除此之外，zset结构中的字典为有序集合创建了从成员到分值的映射，通过字典可以用O(1)复杂度查找给定成员的分值。字典和跳跃表都会通过指针来共享相同元素的成员和分值。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">zset</span> &#123;</span></span><br><span class="line">    dict *dict;</span><br><span class="line">    zskiplist *zsl;</span><br><span class="line">&#125; zset;</span><br></pre></td></tr></table></figure>
+
+<p><strong>有序集合保存的元素数量小于128个且所有元素成员的长度都小于64字节使用ziplist，否则使用skiplist</strong></p>
+<h3 id="内存回收"><a href="#内存回收" class="headerlink" title="内存回收"></a>内存回收</h3><p>Redis构建了自己的引用计数来实现内存回收机制，RedisObject结构的refcount属性就是这个引用计数。</p>
+<h2 id="Redis持久化"><a href="#Redis持久化" class="headerlink" title="Redis持久化"></a>Redis持久化</h2><p>Redis中数据存储模式有2种：cache-only,persistence</p>
+<ul>
+<li>cache-only即只做为“缓存”服务，不持久数据，数据在服务终止后将消失，此模式下也将不存在“数据恢复”的手段，是一种安全性低/效率高/容易扩展的方式；</li>
+<li>persistence即为内存中的数据持久备份到磁盘文件，在服务重启后可以恢复，此模式下数据相对安全。</li>
+</ul>
+<p>对于persistence持久化存储，Redis提供了两种持久化方法</p>
+<ul>
+<li>Redis DataBase(简称RDB)</li>
+<li>Append-only file (简称AOF)</li>
+</ul>
+<h3 id="RDB"><a href="#RDB" class="headerlink" title="RDB"></a>RDB</h3><p>RDB是在某个时间点将数据写入一个临时文件，持久化结束后，用这个临时文件替换上次持久化的文件，达到数据恢复。<br>优点：使用单独子进程来进行持久化，主进程不会进行任何IO操作，保证了redis的高性能<br>缺点：RDB是间隔一段时间进行持久化，如果持久化之间redis发生故障，会发生数据丢失。所以这种方式更适合数据要求不严谨的时候</p>
+<p>这里说的这个执行数据写入到临时文件的时间点是可以通过配置来自己确定的，通过配置redis在n秒内如果超过m个key被修改这执行一次RDB操作。这个操作就类似于在这个时间点来保存一次Redis的所有数据，一次快照数据。所以这个持久化方法也通常叫做snapshots。</p>
+<p>使用RDB恢复数据：<br>RDB文件的载入工作是在服务器启动时自动执行的，并没有专门的命令。但是由于AOF的优先级更高，因此当AOF开启时，Redis会优先载入AOF文件来恢复数据；只有当AOF关闭时，才会在Redis服务器启动时检测RDB文件，并自动载入。服务器载入RDB文件期间处于阻塞状态，直到载入完成为止。</p>
+<p><img src="/Users/houfang/Documents/project/blog/source/_posts/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/1.png" alt="1"></p>
+<ul>
+<li>Redis父进程首先判断：当前是否在执行save，或bgsave/bgrewriteaof（后面会详细介绍该命令）的子进程，如果在执行则bgsave命令直接返回。bgsave/bgrewriteaof 的子进程不能同时执行，主要是基于性能方面的考虑：两个并发的子进程同时执行大量的磁盘写操作，可能引起严重的性能问题。</li>
+<li>父进程执行fork操作创建子进程，这个过程中父进程是阻塞的，Redis不能执行来自客户端的任何命令</li>
+<li>父进程fork后，bgsave命令返回”Background saving started”信息并不再阻塞父进程，并可以响应其他命令</li>
+<li>子进程创建RDB文件，根据父进程内存快照生成临时快照文件，完成后对原有文件进行原子替换</li>
+<li>子进程发送信号给父进程表示完成，父进程更新统计信息</li>
+</ul>
+<h3 id="AOF"><a href="#AOF" class="headerlink" title="AOF"></a>AOF</h3><p>Append-only file，将“操作 + 数据”以格式化指令的方式追加到操作日志文件的尾部，在append操作返回后(已经写入到文件或者即将写入)，才进行实际的数据变更，“日志文件”保存了历史所有的操作过程；当server需要数据恢复时，可以直接replay此日志文件，即可还原所有的操作过程。AOF相对可靠，它和mysql中bin.log、apache.log、zookeeper中txn-log简直异曲同工。AOF文件内容是字符串，非常容易阅读和解析。</p>
+<p>优点：可以保持更高的数据完整性，如果设置追加file的时间是1s，如果redis发生故障，最多会丢失1s的数据；且如果日志写入不完整支持redis-check-aof来进行日志修复；AOF文件没被rewrite之前（文件过大时会对命令进行合并重写），可以删除其中的某些命令（比如误操作的flushall）。</p>
+<p>缺点：AOF文件比RDB文件大，且恢复速度慢。</p>
+<p>我们可以简单的认为AOF就是日志文件，此文件只会记录“变更操作”(例如：set/del等)，如果server中持续的大量变更操作，将会导致AOF文件非常的庞大，意味着server失效后，数据恢复的过程将会很长；事实上，一条数据经过多次变更，将会产生多条AOF记录，其实只要保存当前的状态，历史的操作记录是可以抛弃的；因为AOF持久化模式还伴生了“AOF rewrite”。<br>AOF的特性决定了它相对比较安全，如果你期望数据更少的丢失，那么可以采用AOF模式。如果AOF文件正在被写入时突然server失效，有可能导致文件的最后一次记录是不完整，你可以通过手工或者程序的方式去检测并修正不完整的记录，以便通过aof文件恢复能够正常；同时需要提醒，如果你的redis持久化手段中有aof，那么在server故障失效后再次启动前，需要检测aof文件的完整性。</p>
+<p>AOF默认关闭，开启方法，修改配置文件reds.conf： appendonly yes</p>
+<h4 id="文件写入时机"><a href="#文件写入时机" class="headerlink" title="文件写入时机"></a>文件写入时机</h4><p>AOF是文件操作，对于变更操作比较密集的server，那么必将造成磁盘IO的负荷加重；此外linux对文件操作采取了“延迟写入”手段，即并非每次write操作都会触发实际磁盘操作，而是进入了buffer中，当buffer数据达到阀值时触发实际写入(也有其他时机)，这是linux对文件系统的优化，但是这却有可能带来隐患，如果buffer没有刷新到磁盘，此时物理机器失效(比如断电)，那么有可能导致最后一条或者多条aof记录的丢失。通过上述配置文件，可以得知redis提供了3中aof记录同步选项：</p>
+<ul>
+<li>always：每一条aof记录都立即同步到文件，这是最安全的方式，也以为更多的磁盘操作和阻塞延迟，是IO开支较大</li>
+<li>everysec：每秒同步一次，性能和安全都比较中庸的方式，也是redis推荐的方式。如果遇到物理服务器故障，有可能导致最近一秒内aof记录丢失(可能为部分丢失)</li>
+<li>no：redis并不直接调用文件同步，而是交给操作系统来处理，操作系统可以根据buffer填充情况/通道空闲时间等择机触发同步；这是一种普通的文件操作方式。性能较好，在物理服务器故障时，数据丢失量会因OS配置有关。</li>
+</ul>
+<h4 id="rewrite"><a href="#rewrite" class="headerlink" title="rewrite"></a>rewrite</h4><p>AOF rewrite操作就是“压缩”AOF文件的过程，当然redis并没有采用“基于原aof文件”来重写的方式，而是采取了类似snapshot的方式：基于copy-on-write，全量遍历内存中数据，然后逐个序列到aof文件中。因此AOF rewrite能够正确反应当前内存数据的状态，这正是我们所需要的；**rewrite过程中，对于新的变更操作将仍然被写入到原AOF文件中，同时这些新的变更操作也会被redis收集起来(buffer，copy-on-write方式下，最极端的可能是所有的key都在此期间被修改，将会耗费2倍内存)，当内存数据被全部写入到新的aof文件之后，收集的新的变更操作也将会一并追加到新的aof文件中，此后将会重命名新的aof文件为appendonly.aof,此后所有的操作都将被写入新的aof文件。如果在rewrite过程中，出现故障，将不会影响原AOF文件的正常工作，只有当rewrite完成之后才会切换文件，因为rewrite过程是比较可靠的。<br>AOF rewrite过程并不阻塞客户端请求。系统会开启一个子进程来完成。</p>
+<h2 id="回收策略和LRU"><a href="#回收策略和LRU" class="headerlink" title="回收策略和LRU"></a>回收策略和LRU</h2><p>Redis里定义了多种淘汰策略：</p>
+<ul>
+<li><strong>volatile-lru</strong>：采用最近使用最少的淘汰策略，Redis将回收那些超时的（仅仅是超时的）键值对，也就是它只淘汰那些超时的键值对。</li>
+<li><strong>allkeys-lru</strong>：采用最近最少使用的淘汰策略，Redis将对所有（不仅仅是超时的）的键值对采用最近最少使用的淘汰策略。</li>
+<li><strong>volatile-lfu</strong>：采用最近最不常用的淘汰策略，所谓最近最不常用，也就是一定时期内被访问次数最少的。Redis将回收超时的键值对。</li>
+<li><strong>allkeys-lfu</strong>：采用最近最不常用的淘汰策略，Redis将对所有的键值对采用最近最不常用的淘汰策略。</li>
+<li><strong>volatile-random</strong>：采用随机淘汰策略删除超时的键值对。</li>
+<li><strong>allkeys-random</strong>：采用随机淘汰策略删除所有的键值对，这个策略不常用。</li>
+<li><strong>volatile-ttl</strong>：采用删除存活时间最短的键值对策略。</li>
+<li><strong>noeviction</strong>：不淘汰任何键值对，当内存满时，如果进行读操作，例如get命令，它将正常工作，而做写操作，它将返回错误，也就是说，当Redis采用这个策略内存达到最大的时候，它就只能读不能写了。</li>
+</ul>
+<p>Redis默认采用noeviction策略</p>
+<h3 id="LRU算法"><a href="#LRU算法" class="headerlink" title="LRU算法"></a>LRU算法</h3><p>我们知道，<code>LRU</code>算法需要一个双向链表来记录数据的最近被访问顺序，但是出于节省内存的考虑，<code>Redis</code>的<code>LRU</code>算法并非完整的实现。<code>Redis</code>并不会选择最久未被访问的键进行回收，相反它会尝试运行一个近似<code>LRU</code>的算法，通过对少量键进行取样，然后回收其中的最久未被访问的键。通过调整每次回收时的采样数量<code>maxmemory-samples</code>，可以实现调整算法的精度。</p>
+<p>根据<code>Redis</code>作者的说法，每个<code>Redis Object</code>可以挤出24 bits的空间，但24 bits是不够存储两个指针的，而存储一个低位时间戳是足够的，<code>Redis Object</code>以秒为单位存储了对象新建或者更新时的<code>unix time</code>，也就是<code>LRU clock</code>，24 bits数据要溢出的话需要194天，而缓存的数据更新非常频繁，已经足够了。</p>
+<p><code>Redis</code>的键空间是放在一个哈希表中的，要从所有的键中选出一个最久未被访问的键，需要另外一个数据结构存储这些源信息，这显然不划算。最初，<code>Redis</code>只是随机的选3个key，然后从中淘汰，后来算法改进到了<code>N个key</code>的策略，默认是5个。</p>
+<p><code>Redis</code>3.0之后又改善了算法的性能，会提供一个待淘汰候选key的<code>pool</code>，里面默认有16个key，按照空闲时间排好序。更新时从<code>Redis</code>键空间随机选择N个key，分别计算它们的空闲时间<code>idle</code>，key只会在<code>pool</code>不满或者空闲时间大于<code>pool</code>里最小的时，才会进入<code>pool</code>，然后从<code>pool</code>中选择空闲时间最大的key淘汰掉。</p>
+<p>Redis访问缓存的时候均会调用函数lookupKey</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Low level key lookup API, not actually called directly from commands</span></span><br><span class="line"><span class="comment"> * implementations that should instead rely on lookupKeyRead(),</span></span><br><span class="line"><span class="comment"> * lookupKeyWrite() and lookupKeyReadWithFlags(). */</span></span><br><span class="line"><span class="function">robj *<span class="title">lookupKey</span><span class="params">(redisDb *db, robj *key, <span class="keyword">int</span> flags)</span> </span>&#123;</span><br><span class="line">    dictEntry *de = dictFind(db-&gt;dict,key-&gt;ptr);</span><br><span class="line">    <span class="keyword">if</span> (de) &#123;</span><br><span class="line">        robj *val = dictGetVal(de);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Update the access time for the ageing algorithm.</span></span><br><span class="line"><span class="comment">         * Don't do it if we have a saving child, as this will trigger</span></span><br><span class="line"><span class="comment">         * a copy on write madness. */</span></span><br><span class="line">        <span class="keyword">if</span> (!hasActiveChildProcess() &amp;&amp; !(flags &amp; LOOKUP_NOTOUCH))&#123;</span><br><span class="line">            <span class="comment">//如果是lfu，则调用updateLFU，更新counter</span></span><br><span class="line">            <span class="keyword">if</span> (server.maxmemory_policy &amp; MAXMEMORY_FLAG_LFU) &#123;</span><br><span class="line">                updateLFU(val);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">//更新RedisObject的lru字段</span></span><br><span class="line">                val-&gt;lru = LRU_CLOCK();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> val;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Redis处理命令的入口是processCommand(server.c)，里面有一段处理超过maxmemory的逻辑</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Handle the maxmemory directive.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * Note that we do not want to reclaim memory if we are here re-entering</span></span><br><span class="line"><span class="comment">     * the event loop since there is a busy Lua script running in timeout</span></span><br><span class="line"><span class="comment">     * condition, to avoid mixing the propagation of scripts with the</span></span><br><span class="line"><span class="comment">     * propagation of DELs due to eviction. */</span></span><br><span class="line">    <span class="keyword">if</span> (server.maxmemory &amp;&amp; !server.lua_timedout) &#123;</span><br><span class="line">        <span class="keyword">int</span> out_of_memory = freeMemoryIfNeededAndSafe() == C_ERR;</span><br><span class="line">        <span class="comment">/* freeMemoryIfNeeded may flush slave output buffers. This may result</span></span><br><span class="line"><span class="comment">         * into a slave, that may be the active client, to be freed. */</span></span><br><span class="line">        <span class="keyword">if</span> (server.current_client == <span class="literal">NULL</span>) <span class="keyword">return</span> C_ERR;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* It was impossible to free enough memory, and the command the client</span></span><br><span class="line"><span class="comment">         * is trying to execute is denied during OOM conditions or the client</span></span><br><span class="line"><span class="comment">         * is in MULTI/EXEC context? Error. */</span></span><br><span class="line">        <span class="keyword">if</span> (out_of_memory &amp;&amp;</span><br><span class="line">            (c-&gt;cmd-&gt;flags &amp; CMD_DENYOOM ||</span><br><span class="line">             (c-&gt;flags &amp; CLIENT_MULTI &amp;&amp;</span><br><span class="line">              c-&gt;cmd-&gt;proc != execCommand &amp;&amp;</span><br><span class="line">              c-&gt;cmd-&gt;proc != discardCommand)))</span><br><span class="line">        &#123;</span><br><span class="line">            flagTransaction(c);</span><br><span class="line">            addReply(c, shared.oomerr);</span><br><span class="line">            <span class="keyword">return</span> C_OK;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Save out_of_memory result at script start, otherwise if we check OOM</span></span><br><span class="line"><span class="comment">         * untill first write within script, memory used by lua stack and</span></span><br><span class="line"><span class="comment">         * arguments might interfere. */</span></span><br><span class="line">        <span class="keyword">if</span> (c-&gt;cmd-&gt;proc == evalCommand || c-&gt;cmd-&gt;proc == evalShaCommand) &#123;</span><br><span class="line">            server.lua_oom = out_of_memory;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>freeMemoryIfNeededAndSafe的实现在evict.c里，先来看下注释</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* freeMemoryIfNeeded() gets called when 'maxmemory' is set on the config</span></span><br><span class="line"><span class="comment"> * file to limit the max memory used by the server, before processing a</span></span><br><span class="line"><span class="comment"> * command.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * The goal of the function is to free enough memory to keep Redis under the</span></span><br><span class="line"><span class="comment"> * configured memory limit.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * The function starts calculating how many bytes should be freed to keep</span></span><br><span class="line"><span class="comment"> * Redis under the limit, and enters a loop selecting the best keys to</span></span><br><span class="line"><span class="comment"> * evict accordingly to the configured policy.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * If all the bytes needed to return back under the limit were freed the</span></span><br><span class="line"><span class="comment"> * function returns C_OK, otherwise C_ERR is returned, and the caller</span></span><br><span class="line"><span class="comment"> * should block the execution of commands that will result in more memory</span></span><br><span class="line"><span class="comment"> * used by the server.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * ------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * LRU approximation algorithm</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Redis uses an approximation of the LRU algorithm that runs in constant</span></span><br><span class="line"><span class="comment"> * memory. Every time there is a key to expire, we sample N keys (with</span></span><br><span class="line"><span class="comment"> * N very small, usually in around 5) to populate a pool of best keys to</span></span><br><span class="line"><span class="comment"> * evict of M keys (the pool size is defined by EVPOOL_SIZE).</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * The N keys sampled are added in the pool of good keys to expire (the one</span></span><br><span class="line"><span class="comment"> * with an old access time) if they are better than one of the current keys</span></span><br><span class="line"><span class="comment"> * in the pool.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * After the pool is populated, the best key we have in the pool is expired.</span></span><br><span class="line"><span class="comment"> * However note that we don't remove keys from the pool when they are deleted</span></span><br><span class="line"><span class="comment"> * so the pool may contain keys that no longer exist.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * When we try to evict a key, and all the entries in the pool don't exist</span></span><br><span class="line"><span class="comment"> * we populate it again. This time we'll be sure that the pool has at least</span></span><br><span class="line"><span class="comment"> * one key that can be evicted, if there is at least one key that can be</span></span><br><span class="line"><span class="comment"> * evicted in the whole database. */</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* This function is periodically called to see if there is memory to free</span></span><br><span class="line"><span class="comment"> * according to the current "maxmemory" settings. In case we are over the</span></span><br><span class="line"><span class="comment"> * memory limit, the function will try to free some memory to return back</span></span><br><span class="line"><span class="comment"> * under the limit.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * The function returns C_OK if we are under the memory limit or if we</span></span><br><span class="line"><span class="comment"> * were over the limit, but the attempt to free memory was successful.</span></span><br><span class="line"><span class="comment"> * Otehrwise if we are over the memory limit, but not enough memory</span></span><br><span class="line"><span class="comment"> * was freed to return back under the limit, the function returns C_ERR. */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">freeMemoryIfNeeded</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> keys_freed = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">/* By default replicas should ignore maxmemory</span></span><br><span class="line"><span class="comment">     * and just be masters exact copies. */</span></span><br><span class="line">    <span class="keyword">if</span> (server.masterhost &amp;&amp; server.repl_slave_ignore_maxmemory) <span class="keyword">return</span> C_OK;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">size_t</span> mem_reported, mem_tofree, mem_freed;</span><br><span class="line">    <span class="keyword">mstime_t</span> latency, eviction_latency, lazyfree_latency;</span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> delta;</span><br><span class="line">    <span class="keyword">int</span> slaves = listLength(server.slaves);</span><br><span class="line">    <span class="keyword">int</span> result = C_ERR;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* When clients are paused the dataset should be static not just from the</span></span><br><span class="line"><span class="comment">     * POV of clients not being able to write, but also from the POV of</span></span><br><span class="line"><span class="comment">     * expires and evictions of keys not being performed. */</span></span><br><span class="line">    <span class="keyword">if</span> (clientsArePaused()) <span class="keyword">return</span> C_OK;</span><br><span class="line">    <span class="keyword">if</span> (getMaxmemoryState(&amp;mem_reported,<span class="literal">NULL</span>,&amp;mem_tofree,<span class="literal">NULL</span>) == C_OK)</span><br><span class="line">        <span class="keyword">return</span> C_OK;</span><br><span class="line"></span><br><span class="line">    mem_freed = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    latencyStartMonitor(latency);</span><br><span class="line">    <span class="keyword">if</span> (server.maxmemory_policy == MAXMEMORY_NO_EVICTION)</span><br><span class="line">        <span class="keyword">goto</span> cant_free; <span class="comment">/* We need to free memory, but policy forbids. */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (mem_freed &lt; mem_tofree) &#123;</span><br><span class="line">        <span class="keyword">int</span> j, k, i;</span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">unsigned</span> <span class="keyword">int</span> next_db = <span class="number">0</span>;</span><br><span class="line">        sds bestkey = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="keyword">int</span> bestdbid;</span><br><span class="line">        redisDb *db;</span><br><span class="line">        dict *dict;</span><br><span class="line">        dictEntry *de;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (server.maxmemory_policy &amp; (MAXMEMORY_FLAG_LRU|MAXMEMORY_FLAG_LFU) ||</span><br><span class="line">            server.maxmemory_policy == MAXMEMORY_VOLATILE_TTL)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="class"><span class="keyword">struct</span> <span class="title">evictionPoolEntry</span> *<span class="title">pool</span> = <span class="title">EvictionPoolLRU</span>;</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span>(bestkey == <span class="literal">NULL</span>) &#123;</span><br><span class="line">                <span class="keyword">unsigned</span> <span class="keyword">long</span> total_keys = <span class="number">0</span>, keys;</span><br><span class="line"></span><br><span class="line">                <span class="comment">/* We don't want to make local-db choices when expiring keys,</span></span><br><span class="line"><span class="comment">                 * so to start populate the eviction pool sampling keys from</span></span><br><span class="line"><span class="comment">                 * every DB. */</span></span><br><span class="line">                <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; server.dbnum; i++) &#123;</span><br><span class="line">                    db = server.db+i;</span><br><span class="line">                    <span class="comment">// 如果策略是allkeys，那么选择的db是全体的dict，否则只是带过期的dict</span></span><br><span class="line">                    dict = (server.maxmemory_policy &amp; MAXMEMORY_FLAG_ALLKEYS) ?</span><br><span class="line">                            db-&gt;dict : db-&gt;expires;</span><br><span class="line">                    <span class="keyword">if</span> ((keys = dictSize(dict)) != <span class="number">0</span>) &#123;</span><br><span class="line">                        <span class="comment">//更新候选键池子pool</span></span><br><span class="line">                        evictionPoolPopulate(i, dict, db-&gt;dict, pool);</span><br><span class="line">                        total_keys += keys;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!total_keys) <span class="keyword">break</span>; <span class="comment">/* No keys to evict. */</span></span><br><span class="line"></span><br><span class="line">                <span class="comment">/* Go backward from best to worst element to evict. */</span></span><br><span class="line">                <span class="keyword">for</span> (k = EVPOOL_SIZE<span class="number">-1</span>; k &gt;= <span class="number">0</span>; k--) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (pool[k].key == <span class="literal">NULL</span>) <span class="keyword">continue</span>;</span><br><span class="line">                    bestdbid = pool[k].dbid;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (server.maxmemory_policy &amp; MAXMEMORY_FLAG_ALLKEYS) &#123;</span><br><span class="line">                        de = dictFind(server.db[pool[k].dbid].dict,</span><br><span class="line">                            pool[k].key);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        de = dictFind(server.db[pool[k].dbid].expires,</span><br><span class="line">                            pool[k].key);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="comment">/* Remove the entry from the pool. */</span></span><br><span class="line">                    <span class="keyword">if</span> (pool[k].key != pool[k].cached)</span><br><span class="line">                        sdsfree(pool[k].key);</span><br><span class="line">                    pool[k].key = <span class="literal">NULL</span>;</span><br><span class="line">                    pool[k].idle = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">                    <span class="comment">/* If the key exists, is our pick. Otherwise it is</span></span><br><span class="line"><span class="comment">                     * a ghost and we need to try the next element. */</span></span><br><span class="line">                    <span class="keyword">if</span> (de) &#123;</span><br><span class="line">                        bestkey = dictGetKey(de);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="comment">/* Ghost... Iterate again. */</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* volatile-random and allkeys-random policy */</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (server.maxmemory_policy == MAXMEMORY_ALLKEYS_RANDOM ||</span><br><span class="line">                 server.maxmemory_policy == MAXMEMORY_VOLATILE_RANDOM)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* When evicting a random key, we try to evict a key for</span></span><br><span class="line"><span class="comment">             * each DB, so we use the static 'next_db' variable to</span></span><br><span class="line"><span class="comment">             * incrementally visit all DBs. */</span></span><br><span class="line">            <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; server.dbnum; i++) &#123;</span><br><span class="line">                j = (++next_db) % server.dbnum;</span><br><span class="line">                db = server.db+j;</span><br><span class="line">                dict = (server.maxmemory_policy == MAXMEMORY_ALLKEYS_RANDOM) ?</span><br><span class="line">                        db-&gt;dict : db-&gt;expires;</span><br><span class="line">                <span class="keyword">if</span> (dictSize(dict) != <span class="number">0</span>) &#123;</span><br><span class="line">                    de = dictGetRandomKey(dict);</span><br><span class="line">                    bestkey = dictGetKey(de);</span><br><span class="line">                    bestdbid = j;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Finally remove the selected key. */</span></span><br><span class="line">        <span class="keyword">if</span> (bestkey) &#123;</span><br><span class="line">            db = server.db+bestdbid;</span><br><span class="line">            robj *keyobj = createStringObject(bestkey,sdslen(bestkey));</span><br><span class="line">            propagateExpire(db,keyobj,server.lazyfree_lazy_eviction);</span><br><span class="line">            <span class="comment">/* We compute the amount of memory freed by db*Delete() alone.</span></span><br><span class="line"><span class="comment">             * It is possible that actually the memory needed to propagate</span></span><br><span class="line"><span class="comment">             * the DEL in AOF and replication link is greater than the one</span></span><br><span class="line"><span class="comment">             * we are freeing removing the key, but we can't account for</span></span><br><span class="line"><span class="comment">             * that otherwise we would never exit the loop.</span></span><br><span class="line"><span class="comment">             *</span></span><br><span class="line"><span class="comment">             * AOF and Output buffer memory will be freed eventually so</span></span><br><span class="line"><span class="comment">             * we only care about memory used by the key space. */</span></span><br><span class="line">            delta = (<span class="keyword">long</span> <span class="keyword">long</span>) zmalloc_used_memory();</span><br><span class="line">            latencyStartMonitor(eviction_latency);</span><br><span class="line">            <span class="keyword">if</span> (server.lazyfree_lazy_eviction)</span><br><span class="line">                dbAsyncDelete(db,keyobj);</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                dbSyncDelete(db,keyobj);</span><br><span class="line">            signalModifiedKey(<span class="literal">NULL</span>,db,keyobj);</span><br><span class="line">            latencyEndMonitor(eviction_latency);</span><br><span class="line">            latencyAddSampleIfNeeded(<span class="string">"eviction-del"</span>,eviction_latency);</span><br><span class="line">            delta -= (<span class="keyword">long</span> <span class="keyword">long</span>) zmalloc_used_memory();</span><br><span class="line">            mem_freed += delta;</span><br><span class="line">            server.stat_evictedkeys++;</span><br><span class="line">            notifyKeyspaceEvent(NOTIFY_EVICTED, <span class="string">"evicted"</span>,</span><br><span class="line">                keyobj, db-&gt;id);</span><br><span class="line">            decrRefCount(keyobj);</span><br><span class="line">            keys_freed++;</span><br><span class="line"></span><br><span class="line">            <span class="comment">/* When the memory to free starts to be big enough, we may</span></span><br><span class="line"><span class="comment">             * start spending so much time here that is impossible to</span></span><br><span class="line"><span class="comment">             * deliver data to the slaves fast enough, so we force the</span></span><br><span class="line"><span class="comment">             * transmission here inside the loop. */</span></span><br><span class="line">            <span class="keyword">if</span> (slaves) flushSlavesOutputBuffers();</span><br><span class="line"></span><br><span class="line">            <span class="comment">/* Normally our stop condition is the ability to release</span></span><br><span class="line"><span class="comment">             * a fixed, pre-computed amount of memory. However when we</span></span><br><span class="line"><span class="comment">             * are deleting objects in another thread, it's better to</span></span><br><span class="line"><span class="comment">             * check, from time to time, if we already reached our target</span></span><br><span class="line"><span class="comment">             * memory, since the "mem_freed" amount is computed only</span></span><br><span class="line"><span class="comment">             * across the dbAsyncDelete() call, while the thread can</span></span><br><span class="line"><span class="comment">             * release the memory all the time. */</span></span><br><span class="line">            <span class="keyword">if</span> (server.lazyfree_lazy_eviction &amp;&amp; !(keys_freed % <span class="number">16</span>)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (getMaxmemoryState(<span class="literal">NULL</span>,<span class="literal">NULL</span>,<span class="literal">NULL</span>,<span class="literal">NULL</span>) == C_OK) &#123;</span><br><span class="line">                    <span class="comment">/* Let's satisfy our stop condition. */</span></span><br><span class="line">                    mem_freed = mem_tofree;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">goto</span> cant_free; <span class="comment">/* nothing to free... */</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    result = C_OK;</span><br><span class="line"></span><br><span class="line">cant_free:</span><br><span class="line">    <span class="comment">/* We are here if we are not able to reclaim memory. There is only one</span></span><br><span class="line"><span class="comment">     * last thing we can try: check if the lazyfree thread has jobs in queue</span></span><br><span class="line"><span class="comment">     * and wait... */</span></span><br><span class="line">    <span class="keyword">if</span> (result != C_OK) &#123;</span><br><span class="line">        latencyStartMonitor(lazyfree_latency);</span><br><span class="line">        <span class="keyword">while</span>(bioPendingJobsOfType(BIO_LAZY_FREE)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (getMaxmemoryState(<span class="literal">NULL</span>,<span class="literal">NULL</span>,<span class="literal">NULL</span>,<span class="literal">NULL</span>) == C_OK) &#123;</span><br><span class="line">                result = C_OK;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            usleep(<span class="number">1000</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        latencyEndMonitor(lazyfree_latency);</span><br><span class="line">        latencyAddSampleIfNeeded(<span class="string">"eviction-lazyfree"</span>,lazyfree_latency);</span><br><span class="line">    &#125;</span><br><span class="line">    latencyEndMonitor(latency);</span><br><span class="line">    latencyAddSampleIfNeeded(<span class="string">"eviction-cycle"</span>,latency);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* This is an helper function for freeMemoryIfNeeded(), it is used in order</span></span><br><span class="line"><span class="comment"> * to populate the evictionPool with a few entries every time we want to</span></span><br><span class="line"><span class="comment"> * expire a key. Keys with idle time smaller than one of the current</span></span><br><span class="line"><span class="comment"> * keys are added. Keys are always added if there are free entries.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * We insert keys on place in ascending order, so keys with the smaller</span></span><br><span class="line"><span class="comment"> * idle time are on the left, and keys with the higher idle time on the</span></span><br><span class="line"><span class="comment"> * right. */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">evictionPoolPopulate</span><span class="params">(<span class="keyword">int</span> dbid, dict *sampledict, dict *keydict, struct evictionPoolEntry *pool)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j, k, count;</span><br><span class="line">    dictEntry *samples[server.maxmemory_samples];</span><br><span class="line"></span><br><span class="line">    count = dictGetSomeKeys(sampledict,samples,server.maxmemory_samples);</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; count; j++) &#123;</span><br><span class="line">        <span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="keyword">long</span> idle;</span><br><span class="line">        sds key;</span><br><span class="line">        robj *o;</span><br><span class="line">        dictEntry *de;</span><br><span class="line"></span><br><span class="line">        de = samples[j];</span><br><span class="line">        key = dictGetKey(de);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* If the dictionary we are sampling from is not the main</span></span><br><span class="line"><span class="comment">         * dictionary (but the expires one) we need to lookup the key</span></span><br><span class="line"><span class="comment">         * again in the key dictionary to obtain the value object. */</span></span><br><span class="line">        <span class="keyword">if</span> (server.maxmemory_policy != MAXMEMORY_VOLATILE_TTL) &#123;</span><br><span class="line">            <span class="keyword">if</span> (sampledict != keydict) de = dictFind(keydict, key);</span><br><span class="line">            o = dictGetVal(de);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Calculate the idle time according to the policy. This is called</span></span><br><span class="line"><span class="comment">         * idle just because the code initially handled LRU, but is in fact</span></span><br><span class="line"><span class="comment">         * just a score where an higher score means better candidate. */</span></span><br><span class="line">        <span class="keyword">if</span> (server.maxmemory_policy &amp; MAXMEMORY_FLAG_LRU) &#123;</span><br><span class="line">            idle = estimateObjectIdleTime(o);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (server.maxmemory_policy &amp; MAXMEMORY_FLAG_LFU) &#123;</span><br><span class="line">            <span class="comment">/* When we use an LRU policy, we sort the keys by idle time</span></span><br><span class="line"><span class="comment">             * so that we expire keys starting from greater idle time.</span></span><br><span class="line"><span class="comment">             * However when the policy is an LFU one, we have a frequency</span></span><br><span class="line"><span class="comment">             * estimation, and we want to evict keys with lower frequency</span></span><br><span class="line"><span class="comment">             * first. So inside the pool we put objects using the inverted</span></span><br><span class="line"><span class="comment">             * frequency subtracting the actual frequency to the maximum</span></span><br><span class="line"><span class="comment">             * frequency of 255. */</span></span><br><span class="line">            idle = <span class="number">255</span>-LFUDecrAndReturn(o);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (server.maxmemory_policy == MAXMEMORY_VOLATILE_TTL) &#123;</span><br><span class="line">            <span class="comment">/* In this case the sooner the expire the better. */</span></span><br><span class="line">            idle = ULLONG_MAX - (<span class="keyword">long</span>)dictGetVal(de);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            serverPanic(<span class="string">"Unknown eviction policy in evictionPoolPopulate()"</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Insert the element inside the pool.</span></span><br><span class="line"><span class="comment">         * First, find the first empty bucket or the first populated</span></span><br><span class="line"><span class="comment">         * bucket that has an idle time smaller than our idle time. */</span></span><br><span class="line">        k = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//找到pool空白的位置，放在pool中第一个idle大于当前key的idle</span></span><br><span class="line">        <span class="keyword">while</span> (k &lt; EVPOOL_SIZE &amp;&amp;</span><br><span class="line">               pool[k].key &amp;&amp;</span><br><span class="line">               pool[k].idle &lt; idle) k++;</span><br><span class="line">        <span class="comment">//如果sample的key比最差的还好并且没有空的bucket</span></span><br><span class="line">        <span class="keyword">if</span> (k == <span class="number">0</span> &amp;&amp; pool[EVPOOL_SIZE<span class="number">-1</span>].key != <span class="literal">NULL</span>) &#123;</span><br><span class="line">            <span class="comment">/* Can't insert if the element is &lt; the worst element we have</span></span><br><span class="line"><span class="comment">             * and there are no empty buckets. */</span></span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        <span class="comment">//找到空闲位置则无需额外移动</span></span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (k &lt; EVPOOL_SIZE &amp;&amp; pool[k].key == <span class="literal">NULL</span>) &#123;</span><br><span class="line">            <span class="comment">/* Inserting into empty position. No setup needed before insert. */</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">/* Inserting in the middle. Now k points to the first element</span></span><br><span class="line"><span class="comment">             * greater than the element to insert.  */</span></span><br><span class="line">            <span class="comment">//如果右边还有空的位置，则全部右移</span></span><br><span class="line">            <span class="keyword">if</span> (pool[EVPOOL_SIZE<span class="number">-1</span>].key == <span class="literal">NULL</span>) &#123;</span><br><span class="line">                <span class="comment">/* Free space on the right? Insert at k shifting</span></span><br><span class="line"><span class="comment">                 * all the elements from k to end to the right. */</span></span><br><span class="line"></span><br><span class="line">                <span class="comment">/* Save SDS before overwriting. */</span></span><br><span class="line">                sds cached = pool[EVPOOL_SIZE<span class="number">-1</span>].cached;</span><br><span class="line">                memmove(pool+k+<span class="number">1</span>,pool+k,</span><br><span class="line">                    <span class="keyword">sizeof</span>(pool[<span class="number">0</span>])*(EVPOOL_SIZE-k<span class="number">-1</span>));</span><br><span class="line">                pool[k].cached = cached;</span><br><span class="line">            <span class="comment">//如果右边已经没有空余位置，删除最左边的元素即idle最小，然后左移将当前元素插入在k-1的位置</span></span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">/* No free space on right? Insert at k-1 */</span></span><br><span class="line">                k--;</span><br><span class="line">                <span class="comment">/* Shift all elements on the left of k (included) to the</span></span><br><span class="line"><span class="comment">                 * left, so we discard the element with smaller idle time. */</span></span><br><span class="line">                sds cached = pool[<span class="number">0</span>].cached; <span class="comment">/* Save SDS before overwriting. */</span></span><br><span class="line">                <span class="keyword">if</span> (pool[<span class="number">0</span>].key != pool[<span class="number">0</span>].cached) sdsfree(pool[<span class="number">0</span>].key);</span><br><span class="line">                memmove(pool,pool+<span class="number">1</span>,<span class="keyword">sizeof</span>(pool[<span class="number">0</span>])*k);</span><br><span class="line">                pool[k].cached = cached;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Try to reuse the cached SDS string allocated in the pool entry,</span></span><br><span class="line"><span class="comment">         * because allocating and deallocating this object is costly</span></span><br><span class="line"><span class="comment">         * (according to the profiler, not my fantasy. Remember:</span></span><br><span class="line"><span class="comment">         * premature optimizbla bla bla bla. */</span></span><br><span class="line">        <span class="keyword">int</span> klen = sdslen(key);</span><br><span class="line">        <span class="keyword">if</span> (klen &gt; EVPOOL_CACHED_SDS_SIZE) &#123;</span><br><span class="line">            pool[k].key = sdsdup(key);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="built_in">memcpy</span>(pool[k].cached,key,klen+<span class="number">1</span>);</span><br><span class="line">            sdssetlen(pool[k].cached,klen);</span><br><span class="line">            pool[k].key = pool[k].cached;</span><br><span class="line">        &#125;</span><br><span class="line">        pool[k].idle = idle;</span><br><span class="line">        pool[k].dbid = dbid;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>LFU</p>
+<p>lfu跟lru算法同样都是根据idle值从pool里剔除，不过跟lru不同的是在lru里idle表示当前key的空闲时间，所以越大的应该越先被剔除。lfu里是255-LFUDecrAndReturn(de)，越少被使用的key这个idle值也会更大。所以我们来看下LFUDecrAndReturn方法</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* If the object decrement time is reached decrement the LFU counter but</span></span><br><span class="line"><span class="comment"> * do not update LFU fields of the object, we update the access time</span></span><br><span class="line"><span class="comment"> * and counter in an explicit way when the object is really accessed.</span></span><br><span class="line"><span class="comment"> * And we will times halve the counter according to the times of</span></span><br><span class="line"><span class="comment"> * elapsed time than server.lfu_decay_time.</span></span><br><span class="line"><span class="comment"> * Return the object frequency counter.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * This function is used in order to scan the dataset for the best object</span></span><br><span class="line"><span class="comment"> * to fit: as we check for the candidate, we incrementally decrement the</span></span><br><span class="line"><span class="comment"> * counter of the scanned objects if needed. */</span></span><br><span class="line"><span class="function"><span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="title">LFUDecrAndReturn</span><span class="params">(robj *o)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> ldt = o-&gt;lru &gt;&gt; <span class="number">8</span>; <span class="comment">//原来的时间戳</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> counter = o-&gt;lru &amp; <span class="number">255</span>; <span class="comment">//原来的计数</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> num_periods = server.lfu_decay_time ? LFUTimeElapsed(ldt) / server.lfu_decay_time : <span class="number">0</span>;</span><br><span class="line">    <span class="comment">//counter 衰减</span></span><br><span class="line">    <span class="keyword">if</span> (num_periods)</span><br><span class="line">        counter = (num_periods &gt; counter) ? <span class="number">0</span> : counter - num_periods;</span><br><span class="line">    <span class="comment">//返回剩余的counter</span></span><br><span class="line">    <span class="keyword">return</span> counter;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// counter增加的原理</span></span><br><span class="line"><span class="comment">/* Logarithmically increment a counter. The greater is the current counter value</span></span><br><span class="line"><span class="comment"> * the less likely is that it gets really implemented. Saturate it at 255. */</span></span><br><span class="line"><span class="keyword">uint8_t</span> LFULogIncr(<span class="keyword">uint8_t</span> counter) &#123;</span><br><span class="line">    <span class="keyword">if</span> (counter == <span class="number">255</span>) <span class="keyword">return</span> <span class="number">255</span>;</span><br><span class="line">    <span class="keyword">double</span> r = (<span class="keyword">double</span>)rand()/RAND_MAX;</span><br><span class="line">    <span class="keyword">double</span> baseval = counter - LFU_INIT_VAL;</span><br><span class="line">    <span class="keyword">if</span> (baseval &lt; <span class="number">0</span>) baseval = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">double</span> p = <span class="number">1.0</span>/(baseval*server.lfu_log_factor+<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">if</span> (r &lt; p) counter++; <span class="comment">//counter原值越大增加的难度也就相应增大</span></span><br><span class="line">    <span class="keyword">return</span> counter;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><a href="https://segmentfault.com/a/1190000017555834" target="_blank" rel="noopener">https://segmentfault.com/a/1190000017555834</a></p>
+<h2 id="REPLICATION"><a href="#REPLICATION" class="headerlink" title="REPLICATION"></a>REPLICATION</h2><h2 id="事务"><a href="#事务" class="headerlink" title="事务"></a>事务</h2><h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://blog.csdn.net/sinat_35261315/article/details/78969950" target="_blank" rel="noopener">https://blog.csdn.net/sinat_35261315/article/details/78969950</a></p>
+<p><a href="https://blog.csdn.net/canot/article/details/52886923?ops_request_misc=%7B%22request%5Fid%22%3A%22158908574219725219965182%22%2C%22scm%22%3A%2220140713.130102334.pc%5Fall.57675%22%7D&request_id=158908574219725219965182&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~first_rank_v2~rank_v25-4-52886923.nonecase&utm_term=redis+持久化+aof+和+rdb" target="_blank" rel="noopener">https://blog.csdn.net/canot/article/details/52886923?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522158908574219725219965182%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fall.57675%2522%257D&amp;request_id=158908574219725219965182&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2<del>all</del>first_rank_v2~rank_v25-4-52886923.nonecase&amp;utm_term=redis+%E6%8C%81%E4%B9%85%E5%8C%96+aof+%E5%92%8C+rdb</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E9%9D%A2%E8%AF%95/" rel="tag"># 面试</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/06/redis%E6%93%8D%E4%BD%9C%E6%89%8B%E5%86%8C/" rel="next" title="redis操作手册">
+                <i class="fa fa-chevron-left"></i> redis操作手册
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/17/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/" rel="prev" title="luceneByteBlockPool详解">
+                luceneByteBlockPool详解 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis-io多路复用原理"><span class="nav-number">1.</span> <span class="nav-text">Redis io多路复用原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#发布订阅"><span class="nav-number">2.</span> <span class="nav-text">发布订阅</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据结构"><span class="nav-number">3.</span> <span class="nav-text">数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#对象的类型和编码"><span class="nav-number">3.1.</span> <span class="nav-text">对象的类型和编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#字符串对象"><span class="nav-number">3.2.</span> <span class="nav-text">字符串对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#列表对象"><span class="nav-number">3.3.</span> <span class="nav-text">列表对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#哈希对象"><span class="nav-number">3.4.</span> <span class="nav-text">哈希对象</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#字典的实现"><span class="nav-number">3.4.1.</span> <span class="nav-text">字典的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#rehash的实现"><span class="nav-number">3.4.2.</span> <span class="nav-text">rehash的实现</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#集合对象"><span class="nav-number">3.5.</span> <span class="nav-text">集合对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#有序集合对象"><span class="nav-number">3.6.</span> <span class="nav-text">有序集合对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#内存回收"><span class="nav-number">3.7.</span> <span class="nav-text">内存回收</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis持久化"><span class="nav-number">4.</span> <span class="nav-text">Redis持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RDB"><span class="nav-number">4.1.</span> <span class="nav-text">RDB</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AOF"><span class="nav-number">4.2.</span> <span class="nav-text">AOF</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#文件写入时机"><span class="nav-number">4.2.1.</span> <span class="nav-text">文件写入时机</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#rewrite"><span class="nav-number">4.2.2.</span> <span class="nav-text">rewrite</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#回收策略和LRU"><span class="nav-number">5.</span> <span class="nav-text">回收策略和LRU</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#LRU算法"><span class="nav-number">5.1.</span> <span class="nav-text">LRU算法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#REPLICATION"><span class="nav-number">6.</span> <span class="nav-text">REPLICATION</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事务"><span class="nav-number">7.</span> <span class="nav-text">事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="源码解析," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前面两篇讲解了lucene内部自己实现的跟bytes相关的数据结构，这一节要来剖析一下lucene的field是如何实现倒排索引在内存中的存储的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Lucene内存倒排索引存储实现">
+<meta property="og:url" content="http://yoursite.com/2020/05/18/Lucene%E5%86%85%E5%AD%98%E5%80%92%E6%8E%92%E7%B4%A2%E5%BC%95%E5%AD%98%E5%82%A8%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="前面两篇讲解了lucene内部自己实现的跟bytes相关的数据结构，这一节要来剖析一下lucene的field是如何实现倒排索引在内存中的存储的。">
+<meta property="article:published_time" content="2020-05-18T14:19:31.000Z">
+<meta property="article:modified_time" content="2020-05-23T12:49:19.424Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="源码解析">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/18/Lucene内存倒排索引存储实现/"/>
+
+
+
+
+
+  <title>Lucene内存倒排索引存储实现 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/18/Lucene%E5%86%85%E5%AD%98%E5%80%92%E6%8E%92%E7%B4%A2%E5%BC%95%E5%AD%98%E5%82%A8%E5%AE%9E%E7%8E%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Lucene内存倒排索引存储实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-18T22:19:31+08:00">
+                2020-05-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/lucene/" itemprop="url" rel="index">
+                    <span itemprop="name">lucene</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前面两篇讲解了lucene内部自己实现的跟bytes相关的数据结构，这一节要来剖析一下lucene的field是如何实现倒排索引在内存中的存储的。</p>
+<a id="more"></a>
+
+<p>我们从addDocument开始追溯，不难找到建立倒排索引的地方是在DefaultIndexingChain的processField，它的入参是IndexableField，fieldGen和fieldCount。根据fieldName从fieldHash里找到对应的perField字段，perField就是用来表示每一个field的数据结构。perField的invert方法用来倒排一个文档的一个field</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Inverts one field for one document; first is true</span></span><br><span class="line"><span class="comment"> *  if this is the first time we are seeing this field</span></span><br><span class="line"><span class="comment"> *  name in this document. */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">invert</span><span class="params">(IndexableField field, <span class="keyword">boolean</span> first)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (first) &#123;</span><br><span class="line">    <span class="comment">// First time we're seeing this field (indexed) in</span></span><br><span class="line">    <span class="comment">// this document:</span></span><br><span class="line">    invertState.reset();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  IndexableFieldType fieldType = field.fieldType();</span><br><span class="line"></span><br><span class="line">  IndexOptions indexOptions = fieldType.indexOptions();</span><br><span class="line">  fieldInfo.setIndexOptions(indexOptions);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (fieldType.omitNorms()) &#123;</span><br><span class="line">    fieldInfo.setOmitsNorms();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">boolean</span> analyzed = fieldType.tokenized() &amp;&amp; docState.analyzer != <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">  <span class="comment">/*</span></span><br><span class="line"><span class="comment">   * To assist people in tracking down problems in analysis components, we wish to write the field name to the infostream</span></span><br><span class="line"><span class="comment">   * when we fail. We expect some caller to eventually deal with the real exception, so we don't want any 'catch' clauses,</span></span><br><span class="line"><span class="comment">   * but rather a finally that takes note of the problem.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="keyword">boolean</span> succeededInProcessingField = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">try</span> (TokenStream stream = tokenStream = field.tokenStream(docState.analyzer, tokenStream)) &#123;</span><br><span class="line">    <span class="comment">// reset the TokenStream to the first token</span></span><br><span class="line">    stream.reset();</span><br><span class="line">    invertState.setAttributeSource(stream);</span><br><span class="line">    termsHashPerField.start(field, first);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (stream.incrementToken()) &#123;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// If we hit an exception in stream.next below</span></span><br><span class="line">      <span class="comment">// (which is fairly common, e.g. if analyzer</span></span><br><span class="line">      <span class="comment">// chokes on a given document), then it's</span></span><br><span class="line">      <span class="comment">// non-aborting and (above) this one document</span></span><br><span class="line">      <span class="comment">// will be marked as deleted, but still</span></span><br><span class="line">      <span class="comment">// consume a docID</span></span><br><span class="line"></span><br><span class="line">      <span class="keyword">int</span> posIncr = invertState.posIncrAttribute.getPositionIncrement();</span><br><span class="line">      invertState.position += posIncr;</span><br><span class="line">      <span class="keyword">if</span> (invertState.position &lt; invertState.lastPosition) &#123;</span><br><span class="line">        <span class="keyword">if</span> (posIncr == <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"first position increment must be &gt; 0 (got 0) for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (posIncr &lt; <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position increment must be &gt;= 0 (got "</span> + posIncr + <span class="string">") for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position overflowed Integer.MAX_VALUE (got posIncr="</span> + posIncr + <span class="string">" lastPosition="</span> + invertState.lastPosition + <span class="string">" position="</span> + invertState.position + <span class="string">") for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (invertState.position &gt; IndexWriter.MAX_POSITION) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position "</span> + invertState.position + <span class="string">" is too large for field '"</span> + field.name() + <span class="string">"': max allowed position is "</span> + IndexWriter.MAX_POSITION);</span><br><span class="line">      &#125;</span><br><span class="line">      invertState.lastPosition = invertState.position;</span><br><span class="line">      <span class="keyword">if</span> (posIncr == <span class="number">0</span>) &#123;</span><br><span class="line">        invertState.numOverlap++;</span><br><span class="line">      &#125;</span><br><span class="line">          </span><br><span class="line">      <span class="keyword">int</span> startOffset = invertState.offset + invertState.offsetAttribute.startOffset();</span><br><span class="line">      <span class="keyword">int</span> endOffset = invertState.offset + invertState.offsetAttribute.endOffset();</span><br><span class="line">      <span class="keyword">if</span> (startOffset &lt; invertState.lastStartOffset || endOffset &lt; startOffset) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"startOffset must be non-negative, and endOffset must be &gt;= startOffset, and offsets must not go backwards "</span></span><br><span class="line">                                           + <span class="string">"startOffset="</span> + startOffset + <span class="string">",endOffset="</span> + endOffset + <span class="string">",lastStartOffset="</span> + invertState.lastStartOffset + <span class="string">" for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      invertState.lastStartOffset = startOffset;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        invertState.length = Math.addExact(invertState.length, invertState.termFreqAttribute.getTermFrequency());</span><br><span class="line">      &#125; <span class="keyword">catch</span> (ArithmeticException ae) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"too many tokens for field \""</span> + field.name() + <span class="string">"\""</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      <span class="comment">//System.out.println("  term=" + invertState.termAttribute);</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// If we hit an exception in here, we abort</span></span><br><span class="line">      <span class="comment">// all buffered documents since the last</span></span><br><span class="line">      <span class="comment">// flush, on the likelihood that the</span></span><br><span class="line">      <span class="comment">// internal state of the terms hash is now</span></span><br><span class="line">      <span class="comment">// corrupt and should not be flushed to a</span></span><br><span class="line">      <span class="comment">// new segment:</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        termsHashPerField.add();</span><br><span class="line">      &#125; <span class="keyword">catch</span> (MaxBytesLengthExceededException e) &#123;</span><br><span class="line">        <span class="keyword">byte</span>[] prefix = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">30</span>];</span><br><span class="line">        BytesRef bigTerm = invertState.termAttribute.getBytesRef();</span><br><span class="line">        System.arraycopy(bigTerm.bytes, bigTerm.offset, prefix, <span class="number">0</span>, <span class="number">30</span>);</span><br><span class="line">        String msg = <span class="string">"Document contains at least one immense term in field=\""</span> + fieldInfo.name + <span class="string">"\" (whose UTF8 encoding is longer than the max length "</span> + DocumentsWriterPerThread.MAX_TERM_LENGTH_UTF8 + <span class="string">"), all of which were skipped.  Please correct the analyzer to not produce such terms.  The prefix of the first immense term is: '"</span> + Arrays.toString(prefix) + <span class="string">"...', original message: "</span> + e.getMessage();</span><br><span class="line">        <span class="keyword">if</span> (docState.infoStream.isEnabled(<span class="string">"IW"</span>)) &#123;</span><br><span class="line">          docState.infoStream.message(<span class="string">"IW"</span>, <span class="string">"ERROR: "</span> + msg);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Document will be deleted above:</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(msg, e);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">        <span class="keyword">throw</span> AbortingException.wrap(th);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// trigger streams to perform end-of-stream operations</span></span><br><span class="line">    stream.end();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// <span class="doctag">TODO:</span> maybe add some safety? then again, it's already checked </span></span><br><span class="line">    <span class="comment">// when we come back around to the field...</span></span><br><span class="line">    invertState.position += invertState.posIncrAttribute.getPositionIncrement();</span><br><span class="line">    invertState.offset += invertState.offsetAttribute.endOffset();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* if there is an exception coming through, we won't set this to true here:*/</span></span><br><span class="line">    succeededInProcessingField = <span class="keyword">true</span>;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!succeededInProcessingField &amp;&amp; docState.infoStream.isEnabled(<span class="string">"DW"</span>)) &#123;</span><br><span class="line">      docState.infoStream.message(<span class="string">"DW"</span>, <span class="string">"An exception was thrown while processing field "</span> + fieldInfo.name);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (analyzed) &#123;</span><br><span class="line">    invertState.position += docState.analyzer.getPositionIncrementGap(fieldInfo.name);</span><br><span class="line">    invertState.offset += docState.analyzer.getOffsetGap(fieldInfo.name);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们先看其中最重要的一行</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">termsHashPerField.start(field, first);</span><br></pre></td></tr></table></figure>
+
+<p>termsHashPerField是perField的成员，用它来完成倒排的工作。TermsHashPerField是个抽象方法，构造的时候是用的FreqProxTermsWriterPerField实现，先来看下TermsHashPerField。</p>
+<h3 id="TermsHashPerField"><a href="#TermsHashPerField" class="headerlink" title="TermsHashPerField"></a>TermsHashPerField</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">TermsHashPerField</span> <span class="keyword">implements</span> <span class="title">Comparable</span>&lt;<span class="title">TermsHashPerField</span>&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> HASH_INIT_SIZE = <span class="number">4</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> TermsHash termsHash;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> TermsHashPerField nextPerField;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> DocumentsWriterPerThread.DocState docState;</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> FieldInvertState fieldState;</span><br><span class="line">  TermToBytesRefAttribute termAtt;</span><br><span class="line">  <span class="keyword">protected</span> TermFrequencyAttribute termFreqAtt;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Copied from our perThread</span></span><br><span class="line">  <span class="keyword">final</span> IntBlockPool intPool;</span><br><span class="line">  <span class="keyword">final</span> ByteBlockPool bytePool;</span><br><span class="line">  <span class="keyword">final</span> ByteBlockPool termBytePool;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> streamCount;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> numPostingInt;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">final</span> FieldInfo fieldInfo;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> BytesRefHash bytesHash;</span><br><span class="line"></span><br><span class="line">  ParallelPostingsArray postingsArray;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Counter bytesUsed;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/** streamCount: how many streams this field stores per term.</span></span><br><span class="line"><span class="comment">   * E.g. doc(+freq) is 1 stream, prox+offset is a second. */</span></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">TermsHashPerField</span><span class="params">(<span class="keyword">int</span> streamCount, FieldInvertState fieldState, TermsHash termsHash, TermsHashPerField nextPerField, FieldInfo fieldInfo)</span> </span>&#123;</span><br><span class="line">    intPool = termsHash.intPool;</span><br><span class="line">    bytePool = termsHash.bytePool;</span><br><span class="line">    termBytePool = termsHash.termBytePool;</span><br><span class="line">    docState = termsHash.docState;</span><br><span class="line">    <span class="keyword">this</span>.termsHash = termsHash;</span><br><span class="line">    bytesUsed = termsHash.bytesUsed;</span><br><span class="line">    <span class="keyword">this</span>.fieldState = fieldState;</span><br><span class="line">    <span class="keyword">this</span>.streamCount = streamCount;</span><br><span class="line">    numPostingInt = <span class="number">2</span>*streamCount;</span><br><span class="line">    <span class="keyword">this</span>.fieldInfo = fieldInfo;</span><br><span class="line">    <span class="keyword">this</span>.nextPerField = nextPerField;</span><br><span class="line">    <span class="comment">// byteStarts有一个field保存当前termsHashPerField，以及一个字段保存bytesUsed</span></span><br><span class="line"></span><br><span class="line">    PostingsBytesStartArray byteStarts = <span class="keyword">new</span> PostingsBytesStartArray(<span class="keyword">this</span>, bytesUsed);</span><br><span class="line">    <span class="comment">// 这里会调用PostingsBytesStartArray的init初始化，在那里会创建postingsArray</span></span><br><span class="line">    <span class="comment">// postingsArray的初始大小为2，即freqs,lastOffsets,lastPositions数组大小都为2</span></span><br><span class="line">    bytesHash = <span class="keyword">new</span> BytesRefHash(termBytePool, HASH_INIT_SIZE, byteStarts);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/** This class is passed each token produced by the analyzer</span></span><br><span class="line"><span class="comment"> *  on each field during indexing, and it stores these</span></span><br><span class="line"><span class="comment"> *  tokens in a hash table, and allocates separate byte</span></span><br><span class="line"><span class="comment"> *  streams per token.  Consumers of this class, eg &#123;<span class="doctag">@link</span></span></span><br><span class="line"><span class="comment"> *  FreqProxTermsWriter&#125; and &#123;<span class="doctag">@link</span> TermVectorsConsumer&#125;,</span></span><br><span class="line"><span class="comment"> *  write their own byte streams under each term. */</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">TermsHash</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> TermsHash nextTermsHash;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> IntBlockPool intPool;</span><br><span class="line">  <span class="keyword">final</span> ByteBlockPool bytePool;</span><br><span class="line">  ByteBlockPool termBytePool;</span><br><span class="line">  <span class="keyword">final</span> Counter bytesUsed;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> DocumentsWriterPerThread.DocState docState;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">boolean</span> trackAllocations;</span><br><span class="line"></span><br><span class="line">  TermsHash(<span class="keyword">final</span> DocumentsWriterPerThread docWriter, <span class="keyword">boolean</span> trackAllocations, TermsHash nextTermsHash) &#123;</span><br><span class="line">    <span class="keyword">this</span>.docState = docWriter.docState;</span><br><span class="line">    <span class="keyword">this</span>.trackAllocations = trackAllocations; </span><br><span class="line">    <span class="keyword">this</span>.nextTermsHash = nextTermsHash;</span><br><span class="line">    <span class="keyword">this</span>.bytesUsed = trackAllocations ? docWriter.bytesUsed : Counter.newCounter();</span><br><span class="line">    intPool = <span class="keyword">new</span> IntBlockPool(docWriter.intBlockAllocator);</span><br><span class="line">    bytePool = <span class="keyword">new</span> ByteBlockPool(docWriter.byteBlockAllocator);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (nextTermsHash != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// We are primary</span></span><br><span class="line">      termBytePool = bytePool;</span><br><span class="line">      nextTermsHash.termBytePool = bytePool;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>TermsHashPerField的构造函数里面传了streamCount，fieldState，termsHash，nextPerField和FieldInfo，termHash的类型是TermsHash，TermsHashPerField和TermsHash共享intPool，bytePool，termBytePool。</p>
+<p>通过设置断点，我们发现新建TermsHashPerField的时候实际新建的是TermVectorsConsumerPerField，而其createPostingsArray的方法是</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">TermVectorsPostingsArray</span> <span class="keyword">extends</span> <span class="title">ParallelPostingsArray</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">TermVectorsPostingsArray</span><span class="params">(<span class="keyword">int</span> size)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>(size);</span><br><span class="line">    freqs = <span class="keyword">new</span> <span class="keyword">int</span>[size];</span><br><span class="line">    lastOffsets = <span class="keyword">new</span> <span class="keyword">int</span>[size];</span><br><span class="line">    lastPositions = <span class="keyword">new</span> <span class="keyword">int</span>[size];</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">int</span>[] freqs;                                       <span class="comment">// How many times this term occurred in the current doc</span></span><br><span class="line">  <span class="keyword">int</span>[] lastOffsets;                                 <span class="comment">// Last offset we saw</span></span><br><span class="line">  <span class="keyword">int</span>[] lastPositions;                               <span class="comment">// Last position where this term occurred</span></span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function">ParallelPostingsArray <span class="title">newInstance</span><span class="params">(<span class="keyword">int</span> size)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> TermVectorsPostingsArray(size);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">copyTo</span><span class="params">(ParallelPostingsArray toArray, <span class="keyword">int</span> numToCopy)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">assert</span> toArray <span class="keyword">instanceof</span> TermVectorsPostingsArray;</span><br><span class="line">    TermVectorsPostingsArray to = (TermVectorsPostingsArray) toArray;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">super</span>.copyTo(toArray, numToCopy);</span><br><span class="line"></span><br><span class="line">    System.arraycopy(freqs, <span class="number">0</span>, to.freqs, <span class="number">0</span>, size);</span><br><span class="line">    System.arraycopy(lastOffsets, <span class="number">0</span>, to.lastOffsets, <span class="number">0</span>, size);</span><br><span class="line">    System.arraycopy(lastPositions, <span class="number">0</span>, to.lastPositions, <span class="number">0</span>, size);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">int</span> <span class="title">bytesPerPosting</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">super</span>.bytesPerPosting() + <span class="number">3</span> * Integer.BYTES;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>freqs：当前文档中该term出现的次数</li>
+<li>lastOffsets：上一次出现该term的偏移</li>
+<li>lastPositions：上一次出现该term的位置</li>
+</ul>
+<p>可以看出ParallelPostingsArray占用的Bytes大小为size * 3 * Integer.BYTES，初始化时size为2，所以大小为24个byte</p>
+<p>lastOffsets和lastPositions的区别：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Called once per inverted token.  This is the primary</span></span><br><span class="line"><span class="comment"> *  entry point (for first TermsHash); postings use this</span></span><br><span class="line"><span class="comment"> *  API. */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">add</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// We are first in the chain so we must "intern" the</span></span><br><span class="line">  <span class="comment">// term text into textStart address</span></span><br><span class="line">  <span class="comment">// Get the text &amp; hash of this term.</span></span><br><span class="line">  <span class="comment">// bytesHash上一篇讲过其实是个hashMap，通过bytesHash能够找到当前bytesRef对应的id，如果bytesHash里还不存在则返回的id会大于等于0，否则返回-id-1也就是负数</span></span><br><span class="line">  <span class="keyword">int</span> termID = bytesHash.add(termAtt.getBytesRef());</span><br><span class="line">    </span><br><span class="line">  <span class="comment">//System.out.println("add term=" + termBytesRef.utf8ToString() + " doc=" + docState.docID + " termID=" + termID);</span></span><br><span class="line">  <span class="comment">//termId大于等于0，说明是第一次加入bytesHash</span></span><br><span class="line">  <span class="keyword">if</span> (termID &gt;= <span class="number">0</span>) &#123;<span class="comment">// New posting</span></span><br><span class="line">    bytesHash.byteStart(termID);</span><br><span class="line">    <span class="comment">// Init stream slices</span></span><br><span class="line">    <span class="keyword">if</span> (numPostingInt + intPool.intUpto &gt; IntBlockPool.INT_BLOCK_SIZE) &#123;</span><br><span class="line">      intPool.nextBuffer();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (ByteBlockPool.BYTE_BLOCK_SIZE - bytePool.byteUpto &lt; numPostingInt*ByteBlockPool.FIRST_LEVEL_SIZE) &#123;</span><br><span class="line">      bytePool.nextBuffer();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//拿到当前int数组相关的信息，起始位置，buffer，更新intUpto到最新的空位置</span></span><br><span class="line">    intUptos = intPool.buffer;</span><br><span class="line">    intUptoStart = intPool.intUpto;</span><br><span class="line">    intPool.intUpto += streamCount;</span><br><span class="line">    <span class="comment">//postingArray记录该term的起始位置为intbuffer的offset</span></span><br><span class="line">    postingsArray.intStarts[termID] = intUptoStart + intPool.intOffset;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;streamCount;i++) &#123;</span><br><span class="line">      <span class="comment">//拿到当前byteBuffer的upto</span></span><br><span class="line">      <span class="keyword">final</span> <span class="keyword">int</span> upto = bytePool.newSlice(ByteBlockPool.FIRST_LEVEL_SIZE);</span><br><span class="line">			<span class="comment">//intUptos里存放的是该term在bytePool中的偏移量</span></span><br><span class="line">      intUptos[intUptoStart+i] = upto + bytePool.byteOffset;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//postingArray的byteStarts指向该term对应在bytePool中的偏移量</span></span><br><span class="line">    postingsArray.byteStarts[termID] = intUptos[intUptoStart];</span><br><span class="line">		</span><br><span class="line">    <span class="comment">//创建新的term</span></span><br><span class="line">    newTerm(termID);</span><br><span class="line"></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    termID = (-termID)-<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">int</span> intStart = postingsArray.intStarts[termID];</span><br><span class="line">    intUptos = intPool.buffers[intStart &gt;&gt; IntBlockPool.INT_BLOCK_SHIFT];</span><br><span class="line">    intUptoStart = intStart &amp; IntBlockPool.INT_BLOCK_MASK;</span><br><span class="line">    addTerm(termID);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (doNextCall) &#123;</span><br><span class="line">    nextPerField.add(postingsArray.textStarts[termID]);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>add方法就是最重要的方法了，当分词结束之后每个field的term通过这个方法加入TermsHashPerField。newTerm会根据是类型（TermVectorsPostingsArray和FreqProxPostingsArray）</p>
+<p>总结一下</p>
+<p>TermsHashPerField是针对document的每个field建立以term为key的hash索引。建立索引的方法主要基于ParallelPostingsArray postingsArray结构，从别的地方借鉴一个图来解释这个过程</p>
+<p>![image-20200522205940140](/Users/houfang/Library/Application Support/typora-user-images/image-20200522205940140.png)</p>
+<p>这个图比较老了，有的地方也不太对了但思想还是一致的，原先叫postingsHash，现在已经更名为postingsArray，并且postingsArray不是个数组，是个类定义，前面也讲过postingsArray里面有三个重要的字段：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="keyword">int</span>[] textStarts;</span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span>[] intStarts;</span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span>[] byteStarts;</span><br></pre></td></tr></table></figure>
+
+<p>当一个field出现了一个term时，会从postingsArray找到该term的位置，如果找不到则为-1，添加一个新的元素在postingsArray，更新intStarts，byteStarts和textStarts，intStarts里的元素都指向ByteBlockPool，这个字段是perThread的，相当于建索引的线程只会维护一份byteBuffer，同理IntBlockPool和termBytePool都是perthread的。</p>
+<p>那么怎么从postingsArray里高效地找到这个term的id呢？这时候用到的是BytesRefHash，上一篇讲了BytesRefHash实际上是一个hashmap，以term的hash为key，value就是保存的该term在postingsArray中的便宜，同时还有一个bytesStart指向termBytePool保存的是完整的term，这个是用来检查当key match的时候是否是冲突导致的match，termBytePool这个结构是Perthread的。</p>
+<p>那么什么时候会用到bytePool呢？</p>
+<p>在addTerm或者newTerm里面会根据hasFreq是否设置做不同的处理</p>
+<ul>
+<li>hasFreq为false，如果调用newTerm，那么在postings.lastDocCodes[termID]保存当前term的docId，如果调用addTerm，如果当前doc和该term上次保存的doc id不同，则将保存的该docId和上一次docId的差值写入bytePool</li>
+<li>hasFreq为true，如果调用newTerm，保存该doc的两倍在postings.lastDocCodes[termID]，保存这个term的出现的次数在postings.termFreqs[termID]，如果调用addTerm，如果该term所在doc跟上次见到该term的doc不相同，这里根据该term在上次doc出现次数不同做不同处理，如果该term只出现一次，那么写入postings.lastDocCodes[termID]|1，还记得前面保存doc&lt;&lt;1吗？这里把最右边的一位空出来如果该term的出现次数为1，则写入的值为奇数，即末尾为1。而如果出现次数不为1，则分别写入上次docId以及上一个doc里出现的次数。然后更新postings.lastDocCodes[termID]|为这次docId和上次docId差值的两倍。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">newTerm</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> termID)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// First time we're seeing this term since the last</span></span><br><span class="line">  <span class="comment">// flush</span></span><br><span class="line">  <span class="keyword">final</span> FreqProxPostingsArray postings = freqProxPostingsArray;</span><br><span class="line"></span><br><span class="line">  postings.lastDocIDs[termID] = docState.docID;</span><br><span class="line">  <span class="keyword">if</span> (!hasFreq) &#123;</span><br><span class="line">    <span class="keyword">assert</span> postings.termFreqs == <span class="keyword">null</span>;</span><br><span class="line">    postings.lastDocCodes[termID] = docState.docID;</span><br><span class="line">    fieldState.maxTermFrequency = Math.max(<span class="number">1</span>, fieldState.maxTermFrequency);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// 这里有个magic，保存docId的两倍，当出现次数为1的时候最后一位可以用来标记，则节约了四个byte来记录出现次数</span></span><br><span class="line">    postings.lastDocCodes[termID] = docState.docID &lt;&lt; <span class="number">1</span>;</span><br><span class="line">    postings.termFreqs[termID] = getTermFreq();</span><br><span class="line">    <span class="keyword">if</span> (hasProx) &#123;</span><br><span class="line">      writeProx(termID, fieldState.position);</span><br><span class="line">      <span class="keyword">if</span> (hasOffsets) &#123;</span><br><span class="line">        writeOffsets(termID, fieldState.offset);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">assert</span> !hasOffsets;</span><br><span class="line">    &#125;</span><br><span class="line">    fieldState.maxTermFrequency = Math.max(postings.termFreqs[termID], fieldState.maxTermFrequency);</span><br><span class="line">  &#125;</span><br><span class="line">  fieldState.uniqueTermCount++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addTerm</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> termID)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> FreqProxPostingsArray postings = freqProxPostingsArray;</span><br><span class="line">  <span class="keyword">assert</span> !hasFreq || postings.termFreqs[termID] &gt; <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (!hasFreq) &#123;</span><br><span class="line">    <span class="keyword">assert</span> postings.termFreqs == <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (termFreqAtt.getTermFrequency() != <span class="number">1</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"field \""</span> + fieldInfo.name + <span class="string">"\": must index term freq while using custom TermFrequencyAttribute"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (docState.docID != postings.lastDocIDs[termID]) &#123;</span><br><span class="line">      <span class="comment">// New document; now encode docCode for previous doc:</span></span><br><span class="line">      <span class="keyword">assert</span> docState.docID &gt; postings.lastDocIDs[termID];</span><br><span class="line">      writeVInt(<span class="number">0</span>, postings.lastDocCodes[termID]);</span><br><span class="line">      postings.lastDocCodes[termID] = docState.docID - postings.lastDocIDs[termID];</span><br><span class="line">      postings.lastDocIDs[termID] = docState.docID;</span><br><span class="line">      fieldState.uniqueTermCount++;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (docState.docID != postings.lastDocIDs[termID]) &#123;</span><br><span class="line">    <span class="keyword">assert</span> docState.docID &gt; postings.lastDocIDs[termID]:<span class="string">"id: "</span>+docState.docID + <span class="string">" postings ID: "</span>+ postings.lastDocIDs[termID] + <span class="string">" termID: "</span>+termID;</span><br><span class="line">    <span class="comment">// Term not yet seen in the current doc but previously</span></span><br><span class="line">    <span class="comment">// seen in other doc(s) since the last flush</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Now that we know doc freq for previous doc,</span></span><br><span class="line">    <span class="comment">// write it &amp; lastDocCode</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="number">1</span> == postings.termFreqs[termID]) &#123;</span><br><span class="line">      writeVInt(<span class="number">0</span>, postings.lastDocCodes[termID]|<span class="number">1</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      writeVInt(<span class="number">0</span>, postings.lastDocCodes[termID]);</span><br><span class="line">      writeVInt(<span class="number">0</span>, postings.termFreqs[termID]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Init freq for the current document</span></span><br><span class="line">    postings.termFreqs[termID] = getTermFreq();</span><br><span class="line">    fieldState.maxTermFrequency = Math.max(postings.termFreqs[termID], fieldState.maxTermFrequency);</span><br><span class="line">    postings.lastDocCodes[termID] = (docState.docID - postings.lastDocIDs[termID]) &lt;&lt; <span class="number">1</span>;</span><br><span class="line">    postings.lastDocIDs[termID] = docState.docID;</span><br><span class="line">    <span class="keyword">if</span> (hasProx) &#123;</span><br><span class="line">      writeProx(termID, fieldState.position);</span><br><span class="line">      <span class="keyword">if</span> (hasOffsets) &#123;</span><br><span class="line">        postings.lastOffsets[termID] = <span class="number">0</span>;</span><br><span class="line">        writeOffsets(termID, fieldState.offset);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">assert</span> !hasOffsets;</span><br><span class="line">    &#125;</span><br><span class="line">    fieldState.uniqueTermCount++;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    postings.termFreqs[termID] = Math.addExact(postings.termFreqs[termID], getTermFreq());</span><br><span class="line">    fieldState.maxTermFrequency = Math.max(fieldState.maxTermFrequency, postings.termFreqs[termID]);</span><br><span class="line">    <span class="keyword">if</span> (hasProx) &#123;</span><br><span class="line">      writeProx(termID, fieldState.position-postings.lastPositions[termID]);</span><br><span class="line">      <span class="keyword">if</span> (hasOffsets) &#123;</span><br><span class="line">        writeOffsets(termID, fieldState.offset);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里还有两个bool值hasProx和hasOffsets，当他们为true的时候存储额外的信息</p>
+<ul>
+<li>hasProc=true，如果payloadAttribute为null，则写入该term在doc里的position*2，如果payloadAttribute不为null，则写入postion * 2 | 1，通过position奇偶来区分是否有payload，payload是一个byteRef，所以会依次写入byteRef的长度，然后会把byteRef的内容拷贝进bytePool</li>
+<li>hasOffsets=true，更新postings.lastOffsets[termId]为0，将该term的offset写入bytePool</li>
+</ul>
+<p>总之bytePool是实现倒排索引的关键，保存该term所在的文档，出现频率，offset等等。我们这里分析的是FreqProxTermsWriterPerField，还有另外一种TermVectorsConsumerPerField，功能是相似的，只是写入的内容会不太一样。</p>
+<p>本篇文章讲解了lucene内存是如何进行存储的，接下来两篇我们分别看一下在这之前的处理以及在这之后写入文件系统的代码。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="tag"># 源码解析</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/18/BytesRefHash%E8%AF%A6%E8%A7%A3/" rel="next" title="BytesRefHash详解">
+                <i class="fa fa-chevron-left"></i> BytesRefHash详解
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#TermsHashPerField"><span class="nav-number">1.</span> <span class="nav-text">TermsHashPerField</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

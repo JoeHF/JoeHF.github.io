@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="源码解析," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="lucene底部实现了自己的很多数据结构，ByteBlockPool就是其中一个设计非常精妙的结构，为了搞懂lucene，我们先来熟悉一下这些数据结构">
+<meta property="og:type" content="article">
+<meta property="og:title" content="luceneByteBlockPool详解">
+<meta property="og:url" content="http://yoursite.com/2020/05/17/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="lucene底部实现了自己的很多数据结构，ByteBlockPool就是其中一个设计非常精妙的结构，为了搞懂lucene，我们先来熟悉一下这些数据结构">
+<meta property="og:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/lucene_bytebuffer1.png">
+<meta property="article:published_time" content="2020-05-17T03:13:02.000Z">
+<meta property="article:modified_time" content="2020-05-18T12:52:57.446Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="源码解析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/Users/houfang/Documents/project/blog/source/_posts/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/lucene_bytebuffer1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/17/luceneByteBufferPool详解/"/>
+
+
+
+
+
+  <title>luceneByteBlockPool详解 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/17/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">luceneByteBlockPool详解</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-17T11:13:02+08:00">
+                2020-05-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/lucene/" itemprop="url" rel="index">
+                    <span itemprop="name">lucene</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>lucene底部实现了自己的很多数据结构，ByteBlockPool就是其中一个设计非常精妙的结构，为了搞懂lucene，我们先来熟悉一下这些数据结构</p>
+<a id="more"></a>
+
+<p>先来看一下ByteBlockPool的注释</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** </span></span><br><span class="line"><span class="comment"> * Class that Posting and PostingVector use to write byte</span></span><br><span class="line"><span class="comment"> * streams into shared fixed-size byte[] arrays.  The idea</span></span><br><span class="line"><span class="comment"> * is to allocate slices of increasing lengths For</span></span><br><span class="line"><span class="comment"> * example, the first slice is 5 bytes, the next slice is</span></span><br><span class="line"><span class="comment"> * 14, etc.  We start by writing our bytes into the first</span></span><br><span class="line"><span class="comment"> * 5 bytes.  When we hit the end of the slice, we allocate</span></span><br><span class="line"><span class="comment"> * the next slice and then write the address of the new</span></span><br><span class="line"><span class="comment"> * slice into the last 4 bytes of the previous slice (the</span></span><br><span class="line"><span class="comment"> * "forwarding address").</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Each slice is filled with 0's initially, and we mark</span></span><br><span class="line"><span class="comment"> * the end with a non-zero byte.  This way the methods</span></span><br><span class="line"><span class="comment"> * that are writing into the slice don't need to record</span></span><br><span class="line"><span class="comment"> * its length and instead allocate a new slice once they</span></span><br><span class="line"><span class="comment"> * hit a non-zero byte. </span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * <span class="doctag">@lucene</span>.internal</span></span><br><span class="line"><span class="comment"> **/</span></span><br></pre></td></tr></table></figure>
+
+<p>ByteBlockPool用来保存Posting和PostingVector的固定大小的字节数组。第一个slice分配5个字节，下一个slice分配14个字节，当已经到达slice的尾部时，分配下一个slick并且将新的slice的地址写入前个slice的后四个字节。</p>
+<p>ByteBlockPool定义了下面这些fields</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * array of buffers currently used in the pool. Buffers are allocated if</span></span><br><span class="line"><span class="comment"> * needed don't modify this outside of this class.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">byte</span>[][] buffers = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">10</span>][];</span><br><span class="line"></span><br><span class="line"><span class="comment">/** index into the buffers array pointing to the current buffer used as the head */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">int</span> bufferUpto = -<span class="number">1</span>;                        <span class="comment">// Which buffer we are upto</span></span><br><span class="line"><span class="comment">/** Where we are in head buffer */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">int</span> byteUpto = BYTE_BLOCK_SIZE;</span><br><span class="line"></span><br><span class="line"><span class="comment">/** Current head buffer */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">byte</span>[] buffer;</span><br><span class="line"><span class="comment">/** Current head offset */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">int</span> byteOffset = -BYTE_BLOCK_SIZE;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Allocator allocator;</span><br></pre></td></tr></table></figure>
+
+<p>bufferUpto指向的是我们正在使用的buffer位置，初始为-1，byteUpto保存的是当前buffer的头部</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Advances the pool to its next buffer. This method should be called once</span></span><br><span class="line"><span class="comment">   * after the constructor to initialize the pool. In contrast to the</span></span><br><span class="line"><span class="comment">   * constructor a &#123;<span class="doctag">@link</span> ByteBlockPool#reset()&#125; call will advance the pool to</span></span><br><span class="line"><span class="comment">   * its first buffer immediately.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">nextBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="number">1</span>+bufferUpto == buffers.length) &#123;</span><br><span class="line">      <span class="keyword">byte</span>[][] newBuffers = <span class="keyword">new</span> <span class="keyword">byte</span>[ArrayUtil.oversize(buffers.length+<span class="number">1</span>,</span><br><span class="line">                                                        NUM_BYTES_OBJECT_REF)][];</span><br><span class="line">      System.arraycopy(buffers, <span class="number">0</span>, newBuffers, <span class="number">0</span>, buffers.length);</span><br><span class="line">      buffers = newBuffers;</span><br><span class="line">    &#125;</span><br><span class="line">    buffer = buffers[<span class="number">1</span>+bufferUpto] = allocator.getByteBlock();</span><br><span class="line">    bufferUpto++;</span><br><span class="line"></span><br><span class="line">    byteUpto = <span class="number">0</span>;</span><br><span class="line">    byteOffset += BYTE_BLOCK_SIZE;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>nextBuffer将pool推进到下一个buffer，buffer大小取决于初始化allocator时候指定的大小，bufferUpto指向当前正在使用的buffer，初始为-1，每当调用nextBuffer的时候增加1，byteUpto指向当前正在使用的buffer的头部</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Allocates a new slice with the given size. </span></span><br><span class="line"><span class="comment">   * <span class="doctag">@see</span> ByteBlockPool#FIRST_LEVEL_SIZE</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">newSlice</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> size)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (byteUpto &gt; BYTE_BLOCK_SIZE-size)</span><br><span class="line">      nextBuffer();</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> upto = byteUpto;</span><br><span class="line">    byteUpto += size;</span><br><span class="line">    buffer[byteUpto-<span class="number">1</span>] = <span class="number">16</span>;</span><br><span class="line">    <span class="keyword">return</span> upto;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>newSlice根据size分配buffer的位置，这里将分配的最后一个byte设置为16</p>
+<p>扩容现在的slice</p>
+<p>ByteBlockPool主要解决的问题是数组动态扩容的问题, 我们不确定未来还有多少字符串需要继续写入, 我们首次申请的slice区域很可能就不够用, 而allocSlice解决的就是对当前slice扩容的问题。扩容前我们首先回答如下几个问题:<br>什么时候需要扩容? 扩容多大? 每个slice存储结尾都会存放下一个申请内存的slice, 当即将写入的位置不为0, 则说明说明当前byte代表着slice已经存满, 该byte代表着扩容slice申请数组的一个级别。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// slice代表当前buffer, upto代表slice结束位置, slice[upto]存放的是下一级别</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">allocSlice</span><span class="params">(<span class="keyword">final</span> <span class="keyword">byte</span>[] slice, <span class="keyword">final</span> <span class="keyword">int</span> upto)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 确定下一级别</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> level = slice[upto] &amp; <span class="number">15</span>;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> newLevel = NEXT_LEVEL_ARRAY[level];</span><br><span class="line">    <span class="comment">// 下一级别申请的大小</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> newSize = LEVEL_SIZE_ARRAY[newLevel];</span><br><span class="line">    <span class="comment">// 当前buffer是否还够下一级别的byte[]的申请</span></span><br><span class="line">    <span class="keyword">if</span> (byteUpto &gt; BYTE_BLOCK_SIZE-newSize) &#123;</span><br><span class="line">      nextBuffer();</span><br><span class="line">    &#125;</span><br><span class="line">     <span class="comment">// 当前块的起始位置</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> newUpto = byteUpto;</span><br><span class="line">     <span class="comment">// upto的在整个buffers的绝对位置</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> offset = newUpto + byteOffset;</span><br><span class="line">    <span class="comment">// 目前buffer内新的可写入位置</span></span><br><span class="line">    byteUpto += newSize;</span><br><span class="line">    <span class="comment">// 从当前级别空余3位出来存储当前slice扩容下一级别的起始位置</span></span><br><span class="line">    <span class="comment">// 第一步, 先空出</span></span><br><span class="line">    buffer[newUpto] = slice[upto-<span class="number">3</span>];</span><br><span class="line">    buffer[newUpto+<span class="number">1</span>] = slice[upto-<span class="number">2</span>];</span><br><span class="line">    buffer[newUpto+<span class="number">2</span>] = slice[upto-<span class="number">1</span>];</span><br><span class="line">     <span class="comment">// 空出来的3位连同级别位存放位置</span></span><br><span class="line">    <span class="comment">// Write forwarding address at end of last slice:</span></span><br><span class="line">    slice[upto-<span class="number">3</span>] = (<span class="keyword">byte</span>) (offset &gt;&gt;&gt; <span class="number">24</span>);</span><br><span class="line">    slice[upto-<span class="number">2</span>] = (<span class="keyword">byte</span>) (offset &gt;&gt;&gt; <span class="number">16</span>);</span><br><span class="line">    slice[upto-<span class="number">1</span>] = (<span class="keyword">byte</span>) (offset &gt;&gt;&gt; <span class="number">8</span>);</span><br><span class="line">    slice[upto] = (<span class="keyword">byte</span>) offset;</span><br><span class="line">    <span class="comment">// 在新扩容的slice结尾填写下一级别</span></span><br><span class="line">    <span class="comment">// Write new level:</span></span><br><span class="line">    buffer[byteUpto-<span class="number">1</span>] = (<span class="keyword">byte</span>) (<span class="number">16</span>|newLevel);</span><br><span class="line">    <span class="keyword">return</span> newUpto+<span class="number">3</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><img src="/Users/houfang/Documents/project/blog/source/_posts/luceneByteBufferPool%E8%AF%A6%E8%A7%A3/lucene_bytebuffer1.png" alt="lucene_bytebuffer1"></p>
+<p>其中address是在整个buffers中的绝对位置。 一个buffer可以产生不同的slice, 每个slice不需要连续, 相当于一个链串结构。 slice扩容分为9级, 达到9级后新申请的内存大小都按照第9级别来分配。</p>
+<p>ByteBlockPool最主要的原理都说完了，下面再分析几个使用到的方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Fill the provided &#123;<span class="doctag">@link</span> BytesRef&#125; with the bytes at the specified offset/length slice.</span></span><br><span class="line"><span class="comment">   *  This will avoid copying the bytes, if the slice fits into a single block; otherwise, it uses</span></span><br><span class="line"><span class="comment">   *  the provided &#123;<span class="doctag">@link</span> BytesRefBuilder&#125; to copy bytes over. */</span></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">setBytesRef</span><span class="params">(BytesRefBuilder builder, BytesRef result, <span class="keyword">long</span> offset, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    result.length = length;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> bufferIndex = (<span class="keyword">int</span>) (offset &gt;&gt; BYTE_BLOCK_SHIFT);</span><br><span class="line">    <span class="keyword">byte</span>[] buffer = buffers[bufferIndex];</span><br><span class="line">    <span class="keyword">int</span> pos = (<span class="keyword">int</span>) (offset &amp; BYTE_BLOCK_MASK);</span><br><span class="line">    <span class="keyword">if</span> (pos + length &lt;= BYTE_BLOCK_SIZE) &#123;</span><br><span class="line">      <span class="comment">// common case where the slice lives in a single block: just reference the buffer directly without copying</span></span><br><span class="line">      result.bytes = buffer;</span><br><span class="line">      result.offset = pos;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// uncommon case: the slice spans at least 2 blocks, so we must copy the bytes:</span></span><br><span class="line">      builder.grow(length);</span><br><span class="line">      result.bytes = builder.get().bytes;</span><br><span class="line">      result.offset = <span class="number">0</span>;</span><br><span class="line">      readBytes(offset, result.bytes, <span class="number">0</span>, length);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>setBytesRef方法是将从offset开始的长度为Length的byte放入BytesRef，BytesRef指向buffer里的一块byte数组，如果slice足够大，就不涉及到数据的拷贝。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Fill in a BytesRef from term's length &amp; bytes encoded in</span></span><br><span class="line">  <span class="comment">// byte block</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setBytesRef</span><span class="params">(BytesRef term, <span class="keyword">int</span> textStart)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">byte</span>[] bytes = term.bytes = buffers[textStart &gt;&gt; BYTE_BLOCK_SHIFT];</span><br><span class="line">    <span class="keyword">int</span> pos = textStart &amp; BYTE_BLOCK_MASK;</span><br><span class="line">    <span class="keyword">if</span> ((bytes[pos] &amp; <span class="number">0x80</span>) == <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="comment">// length is 1 byte</span></span><br><span class="line">      term.length = bytes[pos];</span><br><span class="line">      term.offset = pos+<span class="number">1</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// length is 2 bytes</span></span><br><span class="line">      term.length = (bytes[pos]&amp;<span class="number">0x7f</span>) + ((bytes[pos+<span class="number">1</span>]&amp;<span class="number">0xff</span>)&lt;&lt;<span class="number">7</span>);</span><br><span class="line">      term.offset = pos+<span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">assert</span> term.length &gt;= <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>从textStart位置将term赋值给BytesRef</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Appends the bytes in the provided &#123;<span class="doctag">@link</span> BytesRef&#125; at</span></span><br><span class="line"><span class="comment"> * the current position.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">append</span><span class="params">(<span class="keyword">final</span> BytesRef bytes)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> bytesLeft = bytes.length;</span><br><span class="line">  <span class="keyword">int</span> offset = bytes.offset;</span><br><span class="line">  <span class="keyword">while</span> (bytesLeft &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">int</span> bufferLeft = BYTE_BLOCK_SIZE - byteUpto;</span><br><span class="line">    <span class="keyword">if</span> (bytesLeft &lt; bufferLeft) &#123;</span><br><span class="line">      <span class="comment">// fits within current buffer</span></span><br><span class="line">      System.arraycopy(bytes.bytes, offset, buffer, byteUpto, bytesLeft);</span><br><span class="line">      byteUpto += bytesLeft;</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// fill up this buffer and move to next one</span></span><br><span class="line">      <span class="keyword">if</span> (bufferLeft &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        System.arraycopy(bytes.bytes, offset, buffer, byteUpto, bufferLeft);</span><br><span class="line">      &#125;</span><br><span class="line">      nextBuffer();</span><br><span class="line">      bytesLeft -= bufferLeft;</span><br><span class="line">      offset += bufferLeft;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将bytes里的bytes数组添加到buffer中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Reads bytes bytes out of the pool starting at the given offset with the given  </span></span><br><span class="line"><span class="comment">   * length into the given byte array at offset &lt;tt&gt;off&lt;/tt&gt;.</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;Note: this method allows to copy across block boundaries.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">readBytes</span><span class="params">(<span class="keyword">final</span> <span class="keyword">long</span> offset, <span class="keyword">final</span> <span class="keyword">byte</span> bytes[], <span class="keyword">int</span> bytesOffset, <span class="keyword">int</span> bytesLength)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> bytesLeft = bytesLength;</span><br><span class="line">    <span class="keyword">int</span> bufferIndex = (<span class="keyword">int</span>) (offset &gt;&gt; BYTE_BLOCK_SHIFT);</span><br><span class="line">    <span class="keyword">int</span> pos = (<span class="keyword">int</span>) (offset &amp; BYTE_BLOCK_MASK);</span><br><span class="line">    <span class="keyword">while</span> (bytesLeft &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">byte</span>[] buffer = buffers[bufferIndex++];</span><br><span class="line">      <span class="keyword">int</span> chunk = Math.min(bytesLeft, BYTE_BLOCK_SIZE - pos);</span><br><span class="line">      System.arraycopy(buffer, pos, bytes, bytesOffset, chunk);</span><br><span class="line">      bytesOffset += chunk;</span><br><span class="line">      bytesLeft -= chunk;</span><br><span class="line">      pos = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>从buffers的offset处拷贝bytesLength个字节到bytes中的bytesOffset处</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Set the given &#123;<span class="doctag">@link</span> BytesRef&#125; so that its content is equal to the</span></span><br><span class="line"><span class="comment">   * &#123;<span class="doctag">@code</span> ref.length&#125; bytes starting at &#123;<span class="doctag">@code</span> offset&#125;. Most of the time this</span></span><br><span class="line"><span class="comment">   * method will set pointers to internal data-structures. However, in case a</span></span><br><span class="line"><span class="comment">   * value crosses a boundary, a fresh copy will be returned.</span></span><br><span class="line"><span class="comment">   * On the contrary to &#123;<span class="doctag">@link</span> #setBytesRef(BytesRef, int)&#125;, this does not</span></span><br><span class="line"><span class="comment">   * expect the length to be encoded with the data.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setRawBytesRef</span><span class="params">(BytesRef ref, <span class="keyword">final</span> <span class="keyword">long</span> offset)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> bufferIndex = (<span class="keyword">int</span>) (offset &gt;&gt; BYTE_BLOCK_SHIFT);</span><br><span class="line">    <span class="keyword">int</span> pos = (<span class="keyword">int</span>) (offset &amp; BYTE_BLOCK_MASK);</span><br><span class="line">    <span class="keyword">if</span> (pos + ref.length &lt;= BYTE_BLOCK_SIZE) &#123;</span><br><span class="line">      ref.bytes = buffers[bufferIndex];</span><br><span class="line">      ref.offset = pos;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      ref.bytes = <span class="keyword">new</span> <span class="keyword">byte</span>[ref.length];</span><br><span class="line">      ref.offset = <span class="number">0</span>;</span><br><span class="line">      readBytes(offset, ref.bytes, <span class="number">0</span>, ref.length);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>从offset处的将ref里的length赋值给ref</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Read a single byte at the given &#123;<span class="doctag">@code</span> offset&#125;. */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">byte</span> <span class="title">readByte</span><span class="params">(<span class="keyword">long</span> offset)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> bufferIndex = (<span class="keyword">int</span>) (offset &gt;&gt; BYTE_BLOCK_SHIFT);</span><br><span class="line">  <span class="keyword">int</span> pos = (<span class="keyword">int</span>) (offset &amp; BYTE_BLOCK_MASK);</span><br><span class="line">  <span class="keyword">byte</span>[] buffer = buffers[bufferIndex];</span><br><span class="line">  <span class="keyword">return</span> buffer[pos];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从offset处读取一个byte</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="tag"># 源码解析</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/09/redis%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87/" rel="next" title="redis面试必备">
+                <i class="fa fa-chevron-left"></i> redis面试必备
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/18/BytesRefHash%E8%AF%A6%E8%A7%A3/" rel="prev" title="BytesRefHash详解">
+                BytesRefHash详解 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

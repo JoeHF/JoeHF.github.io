@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="spring-data-jpa," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="spring-data-jpa的优点很多，比如继承Repository接口，在注解中书写JPQL语句即可访问数据库；支持方法名解析方式访问数据库；使用Predicate支持动态查询等，在此不一一列举了。这些都是使用spring-data-jpa中的种种优点，要想将之使用的更好更优雅，就要从spring-data-jpa的加载和运行机制进行探秘。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring-data-jpa源码笔记">
+<meta property="og:url" content="http://yoursite.com/2020/04/30/spring-data-jpa%E6%BA%90%E7%A0%81%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="spring-data-jpa的优点很多，比如继承Repository接口，在注解中书写JPQL语句即可访问数据库；支持方法名解析方式访问数据库；使用Predicate支持动态查询等，在此不一一列举了。这些都是使用spring-data-jpa中的种种优点，要想将之使用的更好更优雅，就要从spring-data-jpa的加载和运行机制进行探秘。">
+<meta property="article:published_time" content="2020-04-30T10:25:43.000Z">
+<meta property="article:modified_time" content="2020-05-01T13:24:58.984Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="spring-data-jpa">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/30/spring-data-jpa源码笔记/"/>
+
+
+
+
+
+  <title>spring-data-jpa源码笔记 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/30/spring-data-jpa%E6%BA%90%E7%A0%81%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">spring-data-jpa源码笔记</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-04-30T18:25:43+08:00">
+                2020-04-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/spring/" itemprop="url" rel="index">
+                    <span itemprop="name">spring</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>spring-data-jpa的优点很多，比如继承Repository接口，在注解中书写JPQL语句即可访问数据库；支持方法名解析方式访问数据库；使用Predicate支持动态查询等，在此不一一列举了。这些都是使用spring-data-jpa中的种种优点，要想将之使用的更好更优雅，就要从spring-data-jpa的加载和运行机制进行探秘。</p>
+<a id="more"></a>
+
+<p>spring-data-jpa在运行时和springframework框架实现了无缝对接。在使用spring的@Repository注解生成Repository实例时，使用动态代理类的方式对Repository接口进行了实例化并放入spring容器中备用。</p>
+<p>下面是spring-data-jpa中占重要地位的RepositoryFactoryBeanSupport和RepositoryFactorySupport的类图：</p>
+<p>![image-20200430230346494](/Users/houfang/Library/Application Support/typora-user-images/image-20200430230346494.png)</p>
+<h3 id="RepositoryFactoryBeanSupport"><a href="#RepositoryFactoryBeanSupport" class="headerlink" title="RepositoryFactoryBeanSupport"></a>RepositoryFactoryBeanSupport</h3><p>RepositoryFactoryBeanSupport总的来说是用来方便的通过spring配置的方法setup repository factories。RepositoryFactoryBeanSupport是一个FactoryBean，其getObject方法如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * (non-Javadoc)</span></span><br><span class="line"><span class="comment">	 * @see org.springframework.beans.factory.FactoryBean#getObject()</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Nonnull</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> T <span class="title">getObject</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">this</span>.repository.get();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那这个repository又是在哪里初始化的呢？搜索代码发现是在afterPropertiesSet</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * (non-Javadoc)</span></span><br><span class="line"><span class="comment">	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterPropertiesSet</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.factory = createRepositoryFactory();</span><br><span class="line">		<span class="keyword">this</span>.factory.setQueryLookupStrategyKey(queryLookupStrategyKey);</span><br><span class="line">		<span class="keyword">this</span>.factory.setNamedQueries(namedQueries);</span><br><span class="line">		<span class="keyword">this</span>.factory.setEvaluationContextProvider(</span><br><span class="line">				evaluationContextProvider.orElseGet(() -&gt; QueryMethodEvaluationContextProvider.DEFAULT));</span><br><span class="line">		<span class="keyword">this</span>.factory.setBeanClassLoader(classLoader);</span><br><span class="line">		<span class="keyword">this</span>.factory.setBeanFactory(beanFactory);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (publisher != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">this</span>.factory.addRepositoryProxyPostProcessor(<span class="keyword">new</span> EventPublishingRepositoryProxyPostProcessor(publisher));</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		repositoryBaseClass.ifPresent(<span class="keyword">this</span>.factory::setRepositoryBaseClass);</span><br><span class="line"></span><br><span class="line">		RepositoryFragments customImplementationFragment = customImplementation <span class="comment">//</span></span><br><span class="line">				.map(RepositoryFragments::just) <span class="comment">//</span></span><br><span class="line">				.orElseGet(RepositoryFragments::empty);</span><br><span class="line"></span><br><span class="line">		RepositoryFragments repositoryFragmentsToUse = <span class="keyword">this</span>.repositoryFragments <span class="comment">//</span></span><br><span class="line">				.orElseGet(RepositoryFragments::empty) <span class="comment">//</span></span><br><span class="line">				.append(customImplementationFragment);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.repositoryMetadata = <span class="keyword">this</span>.factory.getRepositoryMetadata(repositoryInterface);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Make sure the aggregate root type is present in the MappingContext (e.g. for auditing)</span></span><br><span class="line">		<span class="keyword">this</span>.mappingContext.ifPresent(it -&gt; it.getPersistentEntity(repositoryMetadata.getDomainType()));</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.repository = Lazy.of(() -&gt; <span class="keyword">this</span>.factory.getRepository(repositoryInterface, repositoryFragmentsToUse));</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (!lazyInit) &#123;</span><br><span class="line">			<span class="keyword">this</span>.repository.get();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因为RepositoryFactoryBeanSupport实现了InitializingBean，所以会被beanFactory在所有properties都被设置之后调用。还可以看到这里repository并不是马上创建的，如果enable了lazyInit，那么只有当用到这个bean的时候才会初始化repository。</p>
+<p>repository的创建需要用到RepositoryFactorySupport这样一个factory的getRepository方法。factory的创建是通过createRepositoryFactory来实现，这是一个抽象方法，由子类来实现。TransactionalRepositoryFactoryBeanSupport就是这样一个子类并且实现了createRepositoryFactory的方法。TransactionalRepositoryFactoryBeanSupport的doCreateRepositoryFactory同样交由子类来完成。TransactionalRepositoryFactoryBeanSupport只是添加了两个后置处理器exceptionPostProcessor和txPostProcessor。TransactionalRepositoryFactoryBeanSupport的子类我们就找到了JpaRepositoryFactoryBean。</p>
+<p>来看一下JpaRepositoryFactoryBean的doCreateRepositoryFactory</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * (non-Javadoc)</span></span><br><span class="line"><span class="comment">	 * @see org.springframework.data.repository.core.support.TransactionalRepositoryFactoryBeanSupport#doCreateRepositoryFactory()</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> RepositoryFactorySupport <span class="title">doCreateRepositoryFactory</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		Assert.state(entityManager != <span class="keyword">null</span>, <span class="string">"EntityManager must not be null!"</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> createRepositoryFactory(entityManager);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Returns a &#123;<span class="doctag">@link</span> RepositoryFactorySupport&#125;.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> RepositoryFactorySupport <span class="title">createRepositoryFactory</span><span class="params">(EntityManager entityManager)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		JpaRepositoryFactory jpaRepositoryFactory = <span class="keyword">new</span> JpaRepositoryFactory(entityManager);</span><br><span class="line">		jpaRepositoryFactory.setEntityPathResolver(entityPathResolver);</span><br><span class="line">		jpaRepositoryFactory.setEscapeCharacter(escapeCharacter);</span><br><span class="line">		<span class="keyword">return</span> jpaRepositoryFactory;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从名字来看JpaRepositoryFactoryBean的doCreateRepositoryFactory返回的正是JpaRepositoryFactory，少了一个bean，正好是从工厂bean得到bean的过程。JpaRepositoryFactory就是通用的repository factory了，它也没有进一步的子类了，它扩展自RepositoryFactorySupport，而且并没有实现getRepository方法，getRepository实现在它继承的抽象父类里面。</p>
+<p>接下来看一下RepositoryFactorySupport的getRepository方法，这个方法是在RepositoryFactorySupport里的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Returns a repository instance for the given interface backed by an instance providing implementation logic for</span></span><br><span class="line"><span class="comment"> * custom logic.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> repositoryInterface must not be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fragments must not be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> * <span class="doctag">@since</span> 2.0</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@SuppressWarnings</span>(&#123; <span class="string">"unchecked"</span> &#125;)</span><br><span class="line"><span class="keyword">public</span> &lt;T&gt; <span class="function">T <span class="title">getRepository</span><span class="params">(Class&lt;T&gt; repositoryInterface, RepositoryFragments fragments)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">		LOG.debug(<span class="string">"Initializing repository instance for &#123;&#125;…"</span>, repositoryInterface.getName());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	Assert.notNull(repositoryInterface, <span class="string">"Repository interface must not be null!"</span>);</span><br><span class="line">	Assert.notNull(fragments, <span class="string">"RepositoryFragments must not be null!"</span>);</span><br><span class="line"></span><br><span class="line">	RepositoryMetadata metadata = getRepositoryMetadata(repositoryInterface);</span><br><span class="line">	RepositoryComposition composition = getRepositoryComposition(metadata, fragments);</span><br><span class="line">   <span class="comment">// getRepositoryInformation 指定repository的base class为SimpleJpaRepository</span></span><br><span class="line">	RepositoryInformation information = getRepositoryInformation(metadata, composition);</span><br><span class="line"></span><br><span class="line">	validate(information, composition);</span><br><span class="line">   <span class="comment">// target即为SimpleJpaRepository的实例</span></span><br><span class="line">	Object target = getTargetRepository(information);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Create proxy</span></span><br><span class="line">   <span class="comment">// 创建SimpleJpaRepository的代理</span></span><br><span class="line">	ProxyFactory result = <span class="keyword">new</span> ProxyFactory();</span><br><span class="line">	result.setTarget(target);</span><br><span class="line">   <span class="comment">// 设置代理的interface，这里有三个接口，第一个即为你编写的repository接口</span></span><br><span class="line">	result.setInterfaces(repositoryInterface, Repository<span class="class">.<span class="keyword">class</span>, <span class="title">TransactionalProxy</span>.<span class="title">class</span>)</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (MethodInvocationValidator.supports(repositoryInterface)) &#123;</span><br><span class="line">		result.addAdvice(<span class="keyword">new</span> MethodInvocationValidator());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	result.addAdvisor(ExposeInvocationInterceptor.ADVISOR);</span><br><span class="line">	<span class="comment">//调用后置处理器对repository代理进行处理</span></span><br><span class="line">	postProcessors.forEach(processor -&gt; processor.postProcess(result, information));</span><br><span class="line"></span><br><span class="line">   <span class="comment">//如果有默认方法，则添加DefaultMethodInvokingMethodInterceptor拦截器</span></span><br><span class="line">	<span class="keyword">if</span> (DefaultMethodInvokingMethodInterceptor.hasDefaultMethods(repositoryInterface)) &#123;</span><br><span class="line">		result.addAdvice(<span class="keyword">new</span> DefaultMethodInvokingMethodInterceptor());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ProjectionFactory projectionFactory = getProjectionFactory(classLoader, beanFactory);</span><br><span class="line">   <span class="comment">//添加QueryExecutorMethodInterceptor拦截器，这个拦截器会将接口定义的方法转化为PartTreeJpaQuery</span></span><br><span class="line">	result.addAdvice(<span class="keyword">new</span> QueryExecutorMethodInterceptor(information, projectionFactory));</span><br><span class="line"></span><br><span class="line">	composition = composition.append(RepositoryFragment.implemented(target));</span><br><span class="line">	result.addAdvice(<span class="keyword">new</span> ImplementationMethodExecutionInterceptor(composition));</span><br><span class="line">	<span class="comment">//注意: 在创建ProxyFactory实例后, 调用getProxy()返回的是Repository接口代理.</span></span><br><span class="line">	<span class="comment">//这也是常说的: Spring Data JPA 的实现原理是动态代理机制</span></span><br><span class="line">	T repository = (T) result.getProxy(classLoader);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">		LOG.debug(<span class="string">"Finished creation of repository instance for &#123;&#125;."</span>, repositoryInterface.getName());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> repository;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中的getTargetRepository又是一个抽象方法。JpaRepositoryFactory里的getTargetRepository返回的就是一个JpaRepositoryImplementation实例，JpaRepositoryImplementation也是一个接口，它继承了JpaRepository。JpaRepositoryImplementation是JpaRepositoryFactory里的内部类。</p>
+<p>在这个方法中可以看到，首先它获取了Repository的各种信息，包括metadata、customImplementation、information等， 然后使用了<code>ProxyFactory</code>，并且为这个<code>ProxyFactory</code>注册了几个<code>Advice</code>，最后通过<code>getProxy</code>方法创建了一个Repository的代理。 而真正起到魔法般作用的应该就是这个<a href="https://github.com/spring-projects/spring-data-commons/blob/master/src/main/java/org/springframework/data/repository/core/support/RepositoryFactorySupport.java#L389" target="_blank" rel="noopener"><code>QueryExecutorMethodInterceptor</code></a>类了。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>RepositoryFactoryBeanSupport的作用是，为spring的FactoryBean接口开发的适配器，可以很便捷的通过spring配置设置repository工厂；而RepositoryFactorySupport的作用是，创建一个给定repository接口实例的工厂bean。创建一个实现配置的repository接口的代理，并应用一个advice将控制交给QueryExecuterMethodInterceptor。</p>
+<p>我们再进一步看一下我们在Repository接口中定义的查询方法是怎么被识别的，这个问题可以在拦截器中找到答案。我们还记得QueryExecutorMethodInterceptor这个拦截器吗？这个是作为advice加入到proxyFactory里去的。它是RepositoryFactorySupport的内部类，里面的内容并不多。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * This &#123;<span class="doctag">@code</span> MethodInterceptor&#125; intercepts calls to methods of the custom implementation and delegates the to it if</span></span><br><span class="line"><span class="comment"> * configured. Furthermore it resolves method calls to finders and triggers execution of them. You can rely on having</span></span><br><span class="line"><span class="comment"> * a custom repository implementation instance set if this returns true.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Oliver Gierke</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QueryExecutorMethodInterceptor</span> <span class="keyword">implements</span> <span class="title">MethodInterceptor</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Method, RepositoryQuery&gt; queries;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> QueryExecutionResultHandler resultHandler;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Creates a new &#123;<span class="doctag">@link</span> QueryExecutorMethodInterceptor&#125;. Builds a model of &#123;<span class="doctag">@link</span> QueryMethod&#125;s to be invoked on</span></span><br><span class="line"><span class="comment">	 * execution of repository interface methods.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">QueryExecutorMethodInterceptor</span><span class="params">(RepositoryInformation repositoryInformation,</span></span></span><br><span class="line"><span class="function"><span class="params">			ProjectionFactory projectionFactory)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.resultHandler = <span class="keyword">new</span> QueryExecutionResultHandler(CONVERSION_SERVICE);</span><br><span class="line">		<span class="comment">//获取lookupStrategy(查找策略)</span></span><br><span class="line">		Optional&lt;QueryLookupStrategy&gt; lookupStrategy = getQueryLookupStrategy(queryLookupStrategyKey,</span><br><span class="line">				RepositoryFactorySupport.<span class="keyword">this</span>.evaluationContextProvider);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (!lookupStrategy.isPresent() &amp;&amp; repositoryInformation.hasQueryMethods()) &#123;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"You have defined query method in the repository but "</span></span><br><span class="line">					+ <span class="string">"you don't have any query lookup strategy defined. The "</span></span><br><span class="line">					+ <span class="string">"infrastructure apparently does not support query methods!"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">//将Method和RepositoryQuery放入Map&lt;Method, RepositoryQuery&gt; queries缓存中</span></span><br><span class="line">		<span class="keyword">this</span>.queries = lookupStrategy <span class="comment">//</span></span><br><span class="line">				.map(it -&gt; mapMethodsToQuery(repositoryInformation, it, projectionFactory)) <span class="comment">//</span></span><br><span class="line">				.orElse(Collections.emptyMap());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> Map&lt;Method, RepositoryQuery&gt; <span class="title">mapMethodsToQuery</span><span class="params">(RepositoryInformation repositoryInformation,</span></span></span><br><span class="line"><span class="function"><span class="params">			QueryLookupStrategy lookupStrategy, ProjectionFactory projectionFactory)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> repositoryInformation.getQueryMethods().stream() <span class="comment">//</span></span><br><span class="line">				<span class="comment">//对Method进行迭代遍历, 根据lookupStrategy(查找策略)查询RepositoryQuery</span></span><br><span class="line">				.map(method -&gt; lookupQuery(method, repositoryInformation, lookupStrategy, projectionFactory)) <span class="comment">//</span></span><br><span class="line">       	<span class="comment">//为其添加监听</span></span><br><span class="line">				.peek(pair -&gt; invokeListeners(pair.getSecond())) <span class="comment">//</span></span><br><span class="line">				.collect(Pair.toMap());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> Pair&lt;Method, RepositoryQuery&gt; <span class="title">lookupQuery</span><span class="params">(Method method, RepositoryInformation information,</span></span></span><br><span class="line"><span class="function"><span class="params">			QueryLookupStrategy strategy, ProjectionFactory projectionFactory)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> Pair.of(method, strategy.resolveQuery(method, information, projectionFactory, namedQueries));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@SuppressWarnings</span>(&#123; <span class="string">"rawtypes"</span>, <span class="string">"unchecked"</span> &#125;)</span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">invokeListeners</span><span class="params">(RepositoryQuery query)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (QueryCreationListener listener : queryPostProcessors) &#123;</span><br><span class="line"></span><br><span class="line">			ResolvableType typeArgument = ResolvableType.forClass(QueryCreationListener<span class="class">.<span class="keyword">class</span>, <span class="title">listener</span>.<span class="title">getClass</span>())</span></span><br><span class="line"><span class="class">					.<span class="title">getGeneric</span>(0)</span>;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (typeArgument != <span class="keyword">null</span> &amp;&amp; typeArgument.isAssignableFrom(ResolvableType.forClass(query.getClass()))) &#123;</span><br><span class="line">				listener.onCreation(query);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * (non-Javadoc)</span></span><br><span class="line"><span class="comment">	 * @see org.aopalliance.intercept.MethodInterceptor#invoke(org.aopalliance.intercept.MethodInvocation)</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(@SuppressWarnings(<span class="string">"null"</span>)</span> MethodInvocation invocation) <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line"></span><br><span class="line">		Method method = invocation.getMethod();</span><br><span class="line"></span><br><span class="line">		QueryExecutionConverters.ExecutionAdapter executionAdapter = QueryExecutionConverters <span class="comment">//</span></span><br><span class="line">				.getExecutionAdapter(method.getReturnType());</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (executionAdapter == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span> resultHandler.postProcessInvocationResult(doInvoke(invocation), method);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> executionAdapter <span class="comment">//</span></span><br><span class="line">				.apply(() -&gt; resultHandler.postProcessInvocationResult(doInvoke(invocation), method));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> Object <span class="title">doInvoke</span><span class="params">(MethodInvocation invocation)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line"></span><br><span class="line">		Method method = invocation.getMethod();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (hasQueryFor(method)) &#123;</span><br><span class="line">			<span class="keyword">return</span> queries.get(method).execute(invocation.getArguments());</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> invocation.proceed();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Returns whether we know of a query to execute for the given &#123;<span class="doctag">@link</span> Method&#125;;</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> method</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">hasQueryFor</span><span class="params">(Method method)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> queries.containsKey(method);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>获取lookupStrategy(查找策略)</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Creates a &#123;<span class="doctag">@link</span> QueryLookupStrategy&#125; for the given &#123;<span class="doctag">@link</span> EntityManager&#125; and &#123;<span class="doctag">@link</span> Key&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> em must not be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> key may be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> extractor must not be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> evaluationContextProvider must not be &#123;<span class="doctag">@literal</span> null&#125;.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> escape</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> QueryLookupStrategy <span class="title">create</span><span class="params">(EntityManager em, @Nullable Key key, QueryExtractor extractor,</span></span></span><br><span class="line"><span class="function"><span class="params">      QueryMethodEvaluationContextProvider evaluationContextProvider, EscapeCharacter escape)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   Assert.notNull(em, <span class="string">"EntityManager must not be null!"</span>);</span><br><span class="line">   Assert.notNull(extractor, <span class="string">"QueryExtractor must not be null!"</span>);</span><br><span class="line">   Assert.notNull(evaluationContextProvider, <span class="string">"EvaluationContextProvider must not be null!"</span>);</span><br><span class="line"></span><br><span class="line">   <span class="keyword">switch</span> (key != <span class="keyword">null</span> ? key : Key.CREATE_IF_NOT_FOUND) &#123;</span><br><span class="line">      <span class="keyword">case</span> CREATE:</span><br><span class="line">         <span class="keyword">return</span> <span class="keyword">new</span> CreateQueryLookupStrategy(em, extractor, escape);</span><br><span class="line">      <span class="keyword">case</span> USE_DECLARED_QUERY:</span><br><span class="line">         <span class="keyword">return</span> <span class="keyword">new</span> DeclaredQueryLookupStrategy(em, extractor, evaluationContextProvider);</span><br><span class="line">      <span class="keyword">case</span> CREATE_IF_NOT_FOUND:</span><br><span class="line">         <span class="keyword">return</span> <span class="keyword">new</span> CreateIfNotFoundQueryLookupStrategy(em, extractor,</span><br><span class="line">               <span class="keyword">new</span> CreateQueryLookupStrategy(em, extractor, escape),</span><br><span class="line">               <span class="keyword">new</span> DeclaredQueryLookupStrategy(em, extractor, evaluationContextProvider));</span><br><span class="line">      <span class="keyword">default</span>:</span><br><span class="line">         <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(<span class="string">"Unsupported query lookup strategy %s!"</span>, key));</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>方法的查询策略有三种:</p>
+<ol>
+<li><code>Create</code>: 通过解析规范命名的方法名来创建查询, 此时即使有<code>@Query</code>或<code>@NameQuery</code>也会忽略. 如果方法名不符合规则，启动的时候会报异常</li>
+<li><code>USE_DECLARED_QUERY</code>: 也就是使用注解方式声明式创建, 启动时就会去尝试找声明的查询, 也就是使用<code>@Query</code>定义的语句来执行查询, 没有则找<code>@NameQuery</code>的, 再没有就异常.</li>
+<li><code>CREATE_IF_NOT_FOUND</code>: 先找<code>@Query</code>或<code>@NameQuery</code>定义的语句来查询, 如果没有就通过解析方法名来创建查询.</li>
+</ol>
+<p>其中, 第三种方式<code>CREATE_IF_NOT_FOUND</code>相当于第一种和第二种的结合版. 也是默认的配置策略.</p>
+<p>QueryLookupStrategy 是策略的定义接口，JpaQueryLookupStrategy 是具体策略的实现类</p>
+<p>我们关心通过方法名来推导查询，所以直接看CreateQueryLookupStrategy</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> QueryLookupStrategy&#125; to create a query from the method name.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Oliver Gierke</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Thomas Darimont</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">CreateQueryLookupStrategy</span> <span class="keyword">extends</span> <span class="title">AbstractQueryLookupStrategy</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> PersistenceProvider persistenceProvider;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> EscapeCharacter escape;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="title">CreateQueryLookupStrategy</span><span class="params">(EntityManager em, QueryExtractor extractor, EscapeCharacter escape)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">super</span>(em, extractor);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">this</span>.persistenceProvider = PersistenceProvider.fromEntityManager(em);</span><br><span class="line">      <span class="keyword">this</span>.escape = escape;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">protected</span> RepositoryQuery <span class="title">resolveQuery</span><span class="params">(JpaQueryMethod method, EntityManager em, NamedQueries namedQueries)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> PartTreeJpaQuery(method, em, persistenceProvider, escape);</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>于是通过方法名推导的query最后会转变为一个PartTreeJpaQuery，它继承AbstractJpaQuery并且实现了RepositoryQuery。AbstractJpaQuery的层次结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">AbstractJpaQuery</span><br><span class="line">	- StoredProcedureJpaQuery</span><br><span class="line">	- PartTreeJpaQuery</span><br><span class="line">	- NamedQuery</span><br><span class="line">	- AbstractStringBasedJpaQuery</span><br><span class="line">		- SimpleJpaQuery</span><br><span class="line">		- NativeJpaQuery</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li><p>SimpleJpaQuery<br>方法头上@Query注解的nativeQuery属性缺省值为false，也就是使用JPQL，此时会创建SimpleJpaQuery实例，并通过两个StringQuery类实例分别持有query jpql语句和根据query jpql计算拼接出来的countQuery jpql语句；</p>
+</li>
+<li><p>NativeJpaQuery<br>方法头上@Query注解的nativeQuery属性如果显式的设置为nativeQuery=true，也就是使用原生SQL，此时就会创建NativeJpaQuery实例；</p>
+</li>
+<li><p>PartTreeJpaQuery<br>方法头上未进行@Query注解，将使用spring-data-jpa独创的方法名识别的方式进行sql语句拼接，此时在spring-data-jpa内部就会创建一个PartTreeJpaQuery实例；</p>
+</li>
+<li><p>NamedQuery<br>使用javax.persistence.NamedQuery注解访问数据库的形式，此时在spring-data-jpa内部就会根据此注解选择创建一个NamedQuery实例；</p>
+</li>
+<li><p>StoredProcedureJpaQuery<br>顾名思义，在Repository接口的方法头上使用org.springframework.data.jpa.repository.query.Procedure注解，也就是调用存储过程的方式访问数据库，此时在spring-data-jpa内部就会根据@Procedure注解而选择创建一个StoredProcedureJpaQuery实例。</p>
+</li>
+</ol>
+<h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><p>lookupStrategy会根据不同的策略将Repository接口里的方法转化为RepositoryQuery也就是AbstractJpaQuery的某种子类，然后保存在queries这个Map&lt;Method, RepositoryQuery&gt;结构。当运行时调用到接口实例的某个方法的时候，由于动态代理的作用，会被QueryExecutorMethodInterceptor拦截，通过调用的方法名找到对应的RepositoryQuery执行execute方法。</p>
+<p>至此，为什么只通过定义接口就实现了数据的CRUD的magic被我们揭开了，这都多亏了spring-data-jpa的功劳。</p>
+<p>reference:</p>
+<p><a href="http://www.dewafer.com/2016/05/09/reading-src-of-spring-data-jpa/" target="_blank" rel="noopener">http://www.dewafer.com/2016/05/09/reading-src-of-spring-data-jpa/</a></p>
+<p><a href="https://zhuanlan.zhihu.com/p/24116397" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/24116397</a></p>
+<p><a href="http://www.spring4all.com/article/520" target="_blank" rel="noopener">http://www.spring4all.com/article/520</a></p>
+<p>这篇还介绍了一部分PartTreeJpaQuery里怎么转化方法名：</p>
+<p>[<a href="https://www.xiefayang.com/2018/06/01/Spring%20Data%20JPA%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%20-%20%E6%96%B9%E6%B3%95%E5%91%BD%E5%90%8D%E6%9F%A5%E8%AF%A2/]" target="_blank" rel="noopener">https://www.xiefayang.com/2018/06/01/Spring%20Data%20JPA%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%20-%20%E6%96%B9%E6%B3%95%E5%91%BD%E5%90%8D%E6%9F%A5%E8%AF%A2/]</a>(<a href="https://www.xiefayang.com/2018/06/01/Spring" target="_blank" rel="noopener">https://www.xiefayang.com/2018/06/01/Spring</a> Data JPA 源码分析 - 方法命名查询/)</p>
+<p>原理解析+一些应用方法+和mybatis比较：</p>
+<p><a href="https://segmentfault.com/a/1190000015047290" target="_blank" rel="noopener">https://segmentfault.com/a/1190000015047290</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/spring-data-jpa/" rel="tag"># spring-data-jpa</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/23/ConcurrentHashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="next" title="ConcurrentHashMap源码分析">
+                <i class="fa fa-chevron-left"></i> ConcurrentHashMap源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/06/redis%E6%93%8D%E4%BD%9C%E6%89%8B%E5%86%8C/" rel="prev" title="redis操作手册">
+                redis操作手册 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#RepositoryFactoryBeanSupport"><span class="nav-number">1.</span> <span class="nav-text">RepositoryFactoryBeanSupport</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">2.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结-1"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
