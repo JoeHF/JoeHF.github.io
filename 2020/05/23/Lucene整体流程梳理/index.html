@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="源码解析," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前一篇讲解了lucene内存中是如何实现倒排索引的，这一篇从宏观层面梳理一下lucene的整体流程，我们会从indexWriter的addDocuments开始分析，这也是最接近我们应用的地方。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Lucene整体流程梳理">
+<meta property="og:url" content="http://yoursite.com/2020/05/23/Lucene%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B%E6%A2%B3%E7%90%86/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="前一篇讲解了lucene内存中是如何实现倒排索引的，这一篇从宏观层面梳理一下lucene的整体流程，我们会从indexWriter的addDocuments开始分析，这也是最接近我们应用的地方。">
+<meta property="article:published_time" content="2020-05-23T12:55:34.000Z">
+<meta property="article:modified_time" content="2020-05-24T10:35:45.062Z">
+<meta property="article:author" content="Joe Hou">
+<meta property="article:tag" content="源码解析">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"right","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/23/Lucene整体流程梳理/"/>
+
+
+
+
+
+  <title>Lucene整体流程梳理 | Hexo</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/23/Lucene%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B%E6%A2%B3%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joe Hou">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Lucene整体流程梳理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-23T20:55:34+08:00">
+                2020-05-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/lucene/" itemprop="url" rel="index">
+                    <span itemprop="name">lucene</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前一篇讲解了lucene内存中是如何实现倒排索引的，这一篇从宏观层面梳理一下lucene的整体流程，我们会从indexWriter的addDocuments开始分析，这也是最接近我们应用的地方。</p>
+<a id="more"></a>
+
+<p>首先就看一下IndexWriter的addDocuments方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">addDocuments</span><span class="params">(Iterable&lt;? extends Iterable&lt;? extends IndexableField&gt;&gt; docs)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> updateDocuments(<span class="keyword">null</span>, docs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Document类实现了Iterable<IndexableField>，Document的iterator方法即调用fields.iterator()，fields的类型是List<IndexableField>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Atomically deletes documents matching the provided</span></span><br><span class="line"><span class="comment"> * delTerm and adds a block of documents with sequentially</span></span><br><span class="line"><span class="comment"> * assigned document IDs, such that an external reader</span></span><br><span class="line"><span class="comment"> * will see all or none of the documents. </span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * See &#123;<span class="doctag">@link</span> #addDocuments(Iterable)&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> The &lt;a href="#sequence_number"&gt;sequence number&lt;/a&gt;</span></span><br><span class="line"><span class="comment"> * for this operation</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> CorruptIndexException if the index is corrupt</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> IOException if there is a low-level IO error</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@lucene</span>.experimental</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">updateDocuments</span><span class="params">(Term delTerm, Iterable&lt;? extends Iterable&lt;? extends IndexableField&gt;&gt; docs)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  ensureOpen();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">boolean</span> success = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">long</span> seqNo = docWriter.updateDocuments(docs, analyzer, delTerm);</span><br><span class="line">      <span class="keyword">if</span> (seqNo &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        seqNo = -seqNo;</span><br><span class="line">        processEvents(<span class="keyword">true</span>, <span class="keyword">false</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      success = <span class="keyword">true</span>;</span><br><span class="line">      <span class="keyword">return</span> seqNo;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">        <span class="keyword">if</span> (infoStream.isEnabled(<span class="string">"IW"</span>)) &#123;</span><br><span class="line">          infoStream.message(<span class="string">"IW"</span>, <span class="string">"hit exception updating document"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (AbortingException | VirtualMachineError tragedy) &#123;</span><br><span class="line">    tragicEvent(tragedy, <span class="string">"updateDocuments"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// dead code but javac disagrees</span></span><br><span class="line">    <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>先深入分析下docWriter.updateDocuments(docs, analyzer, delTerm)，analyzer是初始化indexWriter时赋值的。docWriter是在indexWriter初始化的时候同时被初始化的new DocumentsWriter(this, config, directoryOrig, directory)</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">DocumentsWriter(IndexWriter writer, LiveIndexWriterConfig config, Directory directoryOrig, Directory directory) &#123;</span><br><span class="line">  <span class="keyword">this</span>.directoryOrig = directoryOrig;</span><br><span class="line">  <span class="keyword">this</span>.directory = directory;</span><br><span class="line">  <span class="keyword">this</span>.config = config;</span><br><span class="line">  <span class="keyword">this</span>.infoStream = config.getInfoStream();</span><br><span class="line">  <span class="keyword">this</span>.deleteQueue = <span class="keyword">new</span> DocumentsWriterDeleteQueue(infoStream);</span><br><span class="line">  <span class="keyword">this</span>.perThreadPool = config.getIndexerThreadPool();</span><br><span class="line">  flushPolicy = config.getFlushPolicy();</span><br><span class="line">  <span class="keyword">this</span>.writer = writer;</span><br><span class="line">  <span class="keyword">this</span>.events = <span class="keyword">new</span> ConcurrentLinkedQueue&lt;&gt;();</span><br><span class="line">  flushControl = <span class="keyword">new</span> DocumentsWriterFlushControl(<span class="keyword">this</span>, config, writer.bufferedUpdatesStream);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们之后再分析Directory，这里有个印象就好。回到updateDocument方法来</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">long</span> <span class="title">updateDocuments</span><span class="params">(<span class="keyword">final</span> Iterable&lt;? extends Iterable&lt;? extends IndexableField&gt;&gt; docs, <span class="keyword">final</span> Analyzer analyzer,</span></span></span><br><span class="line"><span class="function"><span class="params">                     <span class="keyword">final</span> Term delTerm)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  <span class="keyword">boolean</span> hasEvents = preUpdate();</span><br><span class="line">  <span class="comment">//ThreadState是被一个线程共享的DocumentsWriterPerThreadPool持有，所以在活动ThreadState的时候用到synchronized保证只有一个线程能够拿到ThreadState</span></span><br><span class="line">  <span class="keyword">final</span> ThreadState perThread = flushControl.obtainAndLock();</span><br><span class="line">  <span class="keyword">final</span> DocumentsWriterPerThread flushingDWPT;</span><br><span class="line">  <span class="keyword">long</span> seqNo;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// This must happen after we've pulled the ThreadState because IW.close</span></span><br><span class="line">    <span class="comment">// waits for all ThreadStates to be released:</span></span><br><span class="line">    ensureOpen();</span><br><span class="line">    <span class="comment">//初始化ThreadState</span></span><br><span class="line">    ensureInitialized(perThread);</span><br><span class="line">    <span class="keyword">assert</span> perThread.isInitialized();</span><br><span class="line">    <span class="keyword">final</span> DocumentsWriterPerThread dwpt = perThread.dwpt;</span><br><span class="line">    <span class="comment">//如果刚初始化该值为0</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> dwptNumDocs = dwpt.getNumDocsInRAM();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">//更新documents的过程实际上是DocumentsWriterPerThread来完成的</span></span><br><span class="line">      seqNo = dwpt.updateDocuments(docs, analyzer, delTerm);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (AbortingException ae) &#123;</span><br><span class="line">      flushControl.doOnAbort(perThread);</span><br><span class="line">      dwpt.abort();</span><br><span class="line">      <span class="keyword">throw</span> ae;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      <span class="comment">// We don't know how many documents were actually</span></span><br><span class="line">      <span class="comment">// counted as indexed, so we must subtract here to</span></span><br><span class="line">      <span class="comment">// accumulate our separate counter:</span></span><br><span class="line">      numDocsInRAM.addAndGet(dwpt.getNumDocsInRAM() - dwptNumDocs);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">boolean</span> isUpdate = delTerm != <span class="keyword">null</span>;</span><br><span class="line">    flushingDWPT = flushControl.doAfterDocument(perThread, isUpdate);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">assert</span> seqNo &gt; perThread.lastSeqNo: <span class="string">"seqNo="</span> + seqNo + <span class="string">" lastSeqNo="</span> + perThread.lastSeqNo;</span><br><span class="line">    perThread.lastSeqNo = seqNo;</span><br><span class="line"></span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    perThreadPool.release(perThread);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (postUpdate(flushingDWPT, hasEvents)) &#123;</span><br><span class="line">    seqNo = -seqNo;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> seqNo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>threadState需要初始化，初始化的过程就是初始化threadState的dwpt</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">ensureInitialized</span><span class="params">(ThreadState state)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (state.dwpt == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">final</span> FieldInfos.Builder infos = <span class="keyword">new</span> FieldInfos.Builder(writer.globalFieldNumberMap);</span><br><span class="line">    state.dwpt = <span class="keyword">new</span> DocumentsWriterPerThread(writer, writer.newSegmentName(), directoryOrig,</span><br><span class="line">                                              directory, config, infoStream, deleteQueue, infos,</span><br><span class="line">                                              writer.pendingNumDocs, writer.enableTestPoints);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">updateDocument</span><span class="params">(Iterable&lt;? extends IndexableField&gt; doc, Analyzer analyzer, Term delTerm)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  testPoint(<span class="string">"DocumentsWriterPerThread addDocument start"</span>);</span><br><span class="line">  <span class="keyword">assert</span> deleteQueue != <span class="keyword">null</span>;</span><br><span class="line">  reserveOneDoc();</span><br><span class="line">  docState.doc = doc;</span><br><span class="line">  docState.analyzer = analyzer;</span><br><span class="line">  docState.docID = numDocsInRAM;</span><br><span class="line">  <span class="keyword">if</span> (INFO_VERBOSE &amp;&amp; infoStream.isEnabled(<span class="string">"DWPT"</span>)) &#123;</span><br><span class="line">    infoStream.message(<span class="string">"DWPT"</span>, Thread.currentThread().getName() + <span class="string">" update delTerm="</span> + delTerm + <span class="string">" docID="</span> + docState.docID + <span class="string">" seg="</span> + segmentInfo.name);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Even on exception, the document is still added (but marked</span></span><br><span class="line">  <span class="comment">// deleted), so we don't need to un-reserve at that point.</span></span><br><span class="line">  <span class="comment">// Aborting exceptions will actually "lose" more than one</span></span><br><span class="line">  <span class="comment">// document, so the counter will be "wrong" in that case, but</span></span><br><span class="line">  <span class="comment">// it's very hard to fix (we can't easily distinguish aborting</span></span><br><span class="line">  <span class="comment">// vs non-aborting exceptions):</span></span><br><span class="line">  <span class="keyword">boolean</span> success = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">//跟进去发现consumer其实是DefaultIndexingChain</span></span><br><span class="line">      consumer.processDocument();</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      docState.clear();</span><br><span class="line">    &#125;</span><br><span class="line">    success = <span class="keyword">true</span>;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">      <span class="comment">// mark document as deleted</span></span><br><span class="line">      deleteDocID(docState.docID);</span><br><span class="line">      numDocsInRAM++;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> finishDocument(delTerm);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processDocument</span><span class="params">()</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// How many indexed field names we've seen (collapses</span></span><br><span class="line">  <span class="comment">// multiple field instances by the same name):</span></span><br><span class="line">  <span class="keyword">int</span> fieldCount = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">long</span> fieldGen = nextFieldGen++;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// <span class="doctag">NOTE:</span> we need two passes here, in case there are</span></span><br><span class="line">  <span class="comment">// multi-valued fields, because we must process all</span></span><br><span class="line">  <span class="comment">// instances of a given field at once, since the</span></span><br><span class="line">  <span class="comment">// analyzer is free to reuse TokenStream across fields</span></span><br><span class="line">  <span class="comment">// (i.e., we cannot have more than one TokenStream</span></span><br><span class="line">  <span class="comment">// running "at once"):</span></span><br><span class="line"></span><br><span class="line">  termsHash.startDocument();</span><br><span class="line"></span><br><span class="line">  startStoredFields(docState.docID);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">boolean</span> aborting = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">for</span> (IndexableField field : docState.doc) &#123;</span><br><span class="line">      fieldCount = processField(field, fieldGen, fieldCount);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (AbortingException ae) &#123;</span><br><span class="line">    aborting = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">throw</span> ae;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (aborting == <span class="keyword">false</span>) &#123;</span><br><span class="line">      <span class="comment">// Finish each indexed field name seen in the document:</span></span><br><span class="line">      <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;fieldCount;i++) &#123;</span><br><span class="line">        fields[i].finish();</span><br><span class="line">      &#125;</span><br><span class="line">      finishStoredFields();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    termsHash.finishDocument();</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">    <span class="comment">// Must abort, on the possibility that on-disk term</span></span><br><span class="line">    <span class="comment">// vectors are now corrupt:</span></span><br><span class="line">    <span class="keyword">throw</span> AbortingException.wrap(th);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们发现processDocuments没有带任何参数，怀疑是在初始化的时候完成的数据初始化</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">DefaultIndexingChain</span><span class="params">(DocumentsWriterPerThread docWriter)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="keyword">this</span>.docWriter = docWriter;</span><br><span class="line">  <span class="keyword">this</span>.fieldInfos = docWriter.getFieldInfosBuilder();</span><br><span class="line">  <span class="keyword">this</span>.docState = docWriter.docState;</span><br><span class="line">  <span class="keyword">this</span>.bytesUsed = docWriter.bytesUsed;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> TermsHash termVectorsWriter;</span><br><span class="line">  <span class="keyword">if</span> (docWriter.getSegmentInfo().getIndexSort() == <span class="keyword">null</span>) &#123;</span><br><span class="line">    storedFieldsConsumer = <span class="keyword">new</span> StoredFieldsConsumer(docWriter);</span><br><span class="line">    termVectorsWriter = <span class="keyword">new</span> TermVectorsConsumer(docWriter);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    storedFieldsConsumer = <span class="keyword">new</span> SortingStoredFieldsConsumer(docWriter);</span><br><span class="line">    termVectorsWriter = <span class="keyword">new</span> SortingTermVectorsConsumer(docWriter);</span><br><span class="line">  &#125;</span><br><span class="line">  termsHash = <span class="keyword">new</span> FreqProxTermsWriter(docWriter, termVectorsWriter);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>果然初始化的时候用到了DocumentsWriterPerThread，前面也讲到在初始化ThreadState的时候做的唯一一件事情就是初始化DocumentsWriterPerThread。</p>
+<p>我们发现无论是TermVectorsConsumer还是SortingTermVectorsConsumer都是继承自TermsHash，而FreqProxTermsWriter也是继承自TermsHash，而在初始化termsHash用到了termVectorsWriter，跟进去看FreqProxTermsWriter发现会将FreqProxTermsWriter的nextTermsHash设置为termVectorsWriter。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">TermsHash(<span class="keyword">final</span> DocumentsWriterPerThread docWriter, <span class="keyword">boolean</span> trackAllocations, TermsHash nextTermsHash) &#123;</span><br><span class="line">  <span class="keyword">this</span>.docState = docWriter.docState;</span><br><span class="line">  <span class="keyword">this</span>.trackAllocations = trackAllocations; </span><br><span class="line">  <span class="keyword">this</span>.nextTermsHash = nextTermsHash;</span><br><span class="line">  <span class="keyword">this</span>.bytesUsed = trackAllocations ? docWriter.bytesUsed : Counter.newCounter();</span><br><span class="line">  intPool = <span class="keyword">new</span> IntBlockPool(docWriter.intBlockAllocator);</span><br><span class="line">  bytePool = <span class="keyword">new</span> ByteBlockPool(docWriter.byteBlockAllocator);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (nextTermsHash != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// We are primary</span></span><br><span class="line">    termBytePool = bytePool;</span><br><span class="line">    nextTermsHash.termBytePool = bytePool;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从TermHash的构造函数可以看出，当nextTermsHash不为空的时候才会设置termBytePool，并且各个termHash的termBytePool是共享的，当没有nextTermsHash的时候不存在termBytePool。</p>
+<p>回过来继续看processDocument，先初始化fieldCount为0，增加了fieldGen。然后便调用termsHash.startDocument。我们发现只有TermVectorsConsumer会有具体的操作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">startDocument</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  resetFields();</span><br><span class="line">  numVectorFields = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>做的事情也非常简单，就是把类型为TermVectorsConsumerPerField[]的perFields的各个字段设置为null，然后重设numVectorFields为0。</p>
+<p>下一步则是startStoredFields</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Calls StoredFieldsWriter.startDocument, aborting the</span></span><br><span class="line"><span class="comment"> *  segment if it hits any exception. */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startStoredFields</span><span class="params">(<span class="keyword">int</span> docID)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    storedFieldsConsumer.startDocument(docID);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">    <span class="keyword">throw</span> AbortingException.wrap(th);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>交由storedFieldsConsumer来处理文档。storedFieldsConsumer在DefaultIndexingChain会根据segmentInfo的indexSort与否初始化为不同的consumer，如果indexSort为null，则用StoredFieldsConsumer，否则用SortingTermVectorsConsumer。SortingStoredFieldsConsumer是继承自StoredFieldsConsumer的，而startDocument实现在StoredFieldsConsumer里。</p>
+<p>先看一下StoredFieldsConsumer怎么startDocument</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">startDocument</span><span class="params">(<span class="keyword">int</span> docID)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="keyword">assert</span> lastDoc &lt; docID;</span><br><span class="line">  initStoredFieldsWriter();</span><br><span class="line">  <span class="keyword">while</span> (++lastDoc &lt; docID) &#123;</span><br><span class="line">    writer.startDocument();</span><br><span class="line">    writer.finishDocument();</span><br><span class="line">  &#125;</span><br><span class="line">  writer.startDocument();</span><br><span class="line"></span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initStoredFieldsWriter</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (writer == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">this</span>.writer =</span><br><span class="line">          docWriter.codec.storedFieldsFormat().fieldsWriter(docWriter.directory, docWriter.getSegmentInfo(),</span><br><span class="line">              IOContext.DEFAULT);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>initStoredFieldsWriter其实就是writer的初始化，docWriter.codec的类型是CodeC，他有两个实现，FilterCodec和Lucene70Codec（TODO（区别）），我们的测试代码用到的是Lucene70Codec，它的storedFieldsFormat为Lucene50StoredFieldsFormat，它的fieldsWriter实现是</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> StoredFieldsWriter <span class="title">fieldsWriter</span><span class="params">(Directory directory, SegmentInfo si, IOContext context)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  String previous = si.putAttribute(MODE_KEY, mode.name());</span><br><span class="line">  <span class="keyword">if</span> (previous != <span class="keyword">null</span> &amp;&amp; previous.equals(mode.name()) == <span class="keyword">false</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"found existing value for "</span> + MODE_KEY + <span class="string">" for segment: "</span> + si.name +</span><br><span class="line">                                    <span class="string">"old="</span> + previous + <span class="string">", new="</span> + mode.name());</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> impl(mode).fieldsWriter(directory, si, context);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function">StoredFieldsFormat <span class="title">impl</span><span class="params">(Mode mode)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">switch</span> (mode) &#123;</span><br><span class="line">      <span class="keyword">case</span> BEST_SPEED: </span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> CompressingStoredFieldsFormat(<span class="string">"Lucene50StoredFieldsFast"</span>, CompressionMode.FAST, <span class="number">1</span> &lt;&lt; <span class="number">14</span>, <span class="number">128</span>, <span class="number">1024</span>);</span><br><span class="line">      <span class="keyword">case</span> BEST_COMPRESSION: </span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> CompressingStoredFieldsFormat(<span class="string">"Lucene50StoredFieldsHigh"</span>, CompressionMode.HIGH_COMPRESSION, <span class="number">61440</span>, <span class="number">512</span>, <span class="number">1024</span>);</span><br><span class="line">      <span class="keyword">default</span>: <span class="keyword">throw</span> <span class="keyword">new</span> AssertionError();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>FieldWriter跟FieldFormat相关，不论是哪种mode，最终用到的FieldFormat都是CompressingStoredFieldsFormat，只是初始化参数不同。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> StoredFieldsWriter <span class="title">fieldsWriter</span><span class="params">(Directory directory, SegmentInfo si,</span></span></span><br><span class="line"><span class="function"><span class="params">    IOContext context)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> CompressingStoredFieldsWriter(directory, si, segmentSuffix, context,</span><br><span class="line">      formatName, compressionMode, chunkSize, maxDocsPerChunk, blockSize);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最终我们看到用到的StoredFieldsWriter实现是CompressingStoredFieldsWriter。</p>
+<p>说回startDocument，while循环是遍历lastDoc和docId的所有doc，调用writer的startDocument。令人意外的是CompressingStoredFieldsWriter的startDocument什么事情都不做</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startDocument</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>回到processDocument，下一步就是遍历doc的所有IndexableField，执行processField</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">processField</span><span class="params">(IndexableField field, <span class="keyword">long</span> fieldGen, <span class="keyword">int</span> fieldCount)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  <span class="comment">//field名字</span></span><br><span class="line">  String fieldName = field.name();</span><br><span class="line">  <span class="comment">//field的选项，就是在初始化某个field的时候用到的参数都会抽象为IndexableFieldType，比如是否保存stored，以及indexOptions</span></span><br><span class="line">  IndexableFieldType fieldType = field.fieldType();</span><br><span class="line"></span><br><span class="line">  PerField fp = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (fieldType.indexOptions() == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException(<span class="string">"IndexOptions must not be null (field: \""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Invert indexed fields:</span></span><br><span class="line">  <span class="comment">// 如果IndexOptions不是NONE,则执行getOrAddField</span></span><br><span class="line">  <span class="keyword">if</span> (fieldType.indexOptions() != IndexOptions.NONE) &#123;</span><br><span class="line">    fp = getOrAddField(fieldName, fieldType, <span class="keyword">true</span>);</span><br><span class="line">    <span class="keyword">boolean</span> first = fp.fieldGen != fieldGen;</span><br><span class="line">    fp.invert(field, first);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (first) &#123;</span><br><span class="line">      fields[fieldCount++] = fp;</span><br><span class="line">      fp.fieldGen = fieldGen;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    verifyUnIndexedFieldType(fieldName, fieldType);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Add stored fields:</span></span><br><span class="line">  <span class="keyword">if</span> (fieldType.stored()) &#123;</span><br><span class="line">    <span class="keyword">if</span> (fp == <span class="keyword">null</span>) &#123;</span><br><span class="line">      fp = getOrAddField(fieldName, fieldType, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (fieldType.stored()) &#123;</span><br><span class="line">      String value = field.stringValue();</span><br><span class="line">      <span class="keyword">if</span> (value != <span class="keyword">null</span> &amp;&amp; value.length() &gt; IndexWriter.MAX_STORED_STRING_LENGTH) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"stored field \""</span> + field.name() + <span class="string">"\" is too large ("</span> + value.length() + <span class="string">" characters) to store"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        storedFieldsConsumer.writeField(fp.fieldInfo, field);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">        <span class="keyword">throw</span> AbortingException.wrap(th);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  DocValuesType dvType = fieldType.docValuesType();</span><br><span class="line">  <span class="keyword">if</span> (dvType == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException(<span class="string">"docValuesType must not be null (field: \""</span> + fieldName + <span class="string">"\")"</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (dvType != DocValuesType.NONE) &#123;</span><br><span class="line">    <span class="keyword">if</span> (fp == <span class="keyword">null</span>) &#123;</span><br><span class="line">      fp = getOrAddField(fieldName, fieldType, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    indexDocValue(fp, dvType, field);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (fieldType.pointDimensionCount() != <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (fp == <span class="keyword">null</span>) &#123;</span><br><span class="line">      fp = getOrAddField(fieldName, fieldType, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    indexPoint(fp, field);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">return</span> fieldCount;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Returns a previously created &#123;<span class="doctag">@link</span> PerField&#125;,</span></span><br><span class="line"><span class="comment"> *  absorbing the type information from &#123;<span class="doctag">@link</span> FieldType&#125;,</span></span><br><span class="line"><span class="comment"> *  and creates a new &#123;<span class="doctag">@link</span> PerField&#125; if this field name</span></span><br><span class="line"><span class="comment"> *  wasn't seen yet. */</span></span><br><span class="line"><span class="comment">//注释很清楚了，如果这个field名字还没有见过，则通过FieldType创建PerField，如果该PerField已经创建过了，则返回之前创建的PerField</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> PerField <span class="title">getOrAddField</span><span class="params">(String name, IndexableFieldType fieldType, <span class="keyword">boolean</span> invert)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Make sure we have a PerField allocated</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> hashPos = name.hashCode() &amp; hashMask;</span><br><span class="line">  <span class="comment">// FieldHash为了一个数组，之所以不使用hashMap是性能考虑</span></span><br><span class="line">  PerField fp = fieldHash[hashPos];</span><br><span class="line">  <span class="keyword">while</span> (fp != <span class="keyword">null</span> &amp;&amp; !fp.fieldInfo.name.equals(name)) &#123;</span><br><span class="line">    fp = fp.next;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (fp == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// First time we are seeing this field in this segment</span></span><br><span class="line">		<span class="comment">//根据field的name创建对应的FieldInfo</span></span><br><span class="line">    FieldInfo fi = fieldInfos.getOrAdd(name);</span><br><span class="line">    <span class="comment">// Messy: must set this here because e.g. FreqProxTermsWriterPerField looks at the initial</span></span><br><span class="line">    <span class="comment">// IndexOptions to decide what arrays it must create).  Then, we also must set it in</span></span><br><span class="line">    <span class="comment">// PerField.invert to allow for later downgrading of the index options:</span></span><br><span class="line">    fi.setIndexOptions(fieldType.indexOptions());</span><br><span class="line">    <span class="comment">//getIndexCreatedVersionMajor是lucene index的version，对于要创建倒排的field，这里invert为true</span></span><br><span class="line">    fp = <span class="keyword">new</span> PerField(docWriter.getIndexCreatedVersionMajor(), fi, invert);</span><br><span class="line">    fp.next = fieldHash[hashPos];</span><br><span class="line">    fieldHash[hashPos] = fp;</span><br><span class="line">    <span class="comment">//将当前field放在hash表的头部</span></span><br><span class="line">    totalFieldCount++;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// At most 50% load factor:</span></span><br><span class="line">    <span class="keyword">if</span> (totalFieldCount &gt;= fieldHash.length/<span class="number">2</span>) &#123;</span><br><span class="line">      <span class="comment">//将hash表扩容</span></span><br><span class="line">      <span class="comment">//TODO(有机会在回过头来看rehash的实现)</span></span><br><span class="line">      rehash();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//当初扩大fields数组的大小，不涉及rehash</span></span><br><span class="line">    <span class="keyword">if</span> (totalFieldCount &gt; fields.length) &#123;</span><br><span class="line">      PerField[] newFields = <span class="keyword">new</span> PerField[ArrayUtil.oversize(totalFieldCount, RamUsageEstimator.NUM_BYTES_OBJECT_REF)];</span><br><span class="line">      System.arraycopy(fields, <span class="number">0</span>, newFields, <span class="number">0</span>, fields.length);</span><br><span class="line">      fields = newFields;</span><br><span class="line">    &#125;</span><br><span class="line">  <span class="comment">//如果这个field Name已经见过，并且这次该field需要实现倒排且它当前的倒排状态为null，则更新fieldInfo的倒排选项</span></span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (invert &amp;&amp; fp.invertState == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// Messy: must set this here because e.g. FreqProxTermsWriterPerField looks at the initial</span></span><br><span class="line">    <span class="comment">// IndexOptions to decide what arrays it must create).  Then, we also must set it in</span></span><br><span class="line">    <span class="comment">// PerField.invert to allow for later downgrading of the index options:</span></span><br><span class="line">    fp.fieldInfo.setIndexOptions(fieldType.indexOptions());</span><br><span class="line">    fp.setInvertState();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> fp;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>单独看一下PerField的构造函数</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">PerField</span><span class="params">(<span class="keyword">int</span> indexCreatedVersionMajor, FieldInfo fieldInfo, <span class="keyword">boolean</span> invert)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">this</span>.indexCreatedVersionMajor = indexCreatedVersionMajor;</span><br><span class="line">  <span class="keyword">this</span>.fieldInfo = fieldInfo;</span><br><span class="line">  similarity = docState.similarity;</span><br><span class="line">  <span class="keyword">if</span> (invert) &#123;</span><br><span class="line">    setInvertState();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">setInvertState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">//设置invertState</span></span><br><span class="line">  invertState = <span class="keyword">new</span> FieldInvertState(indexCreatedVersionMajor, fieldInfo.name);</span><br><span class="line">  <span class="comment">//创建termsHashPerField</span></span><br><span class="line">  termsHashPerField = termsHash.addField(invertState, fieldInfo);</span><br><span class="line">  <span class="keyword">if</span> (fieldInfo.omitsNorms() == <span class="keyword">false</span>) &#123;</span><br><span class="line">    <span class="keyword">assert</span> norms == <span class="keyword">null</span>;</span><br><span class="line">    <span class="comment">// Even if no documents actually succeed in setting a norm, we still write norms for this segment:</span></span><br><span class="line">    <span class="comment">//如果不略过omitsNorms，则初始化norms</span></span><br><span class="line">    norms = <span class="keyword">new</span> NormValuesWriter(fieldInfo, docState.docWriter.bytesUsed);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>termsHashPerField是通过termsHash的addField来创建的，之前提到过当indexSort为null的时候，termHash为FreqProxTermsWriter，其nextTermHash为TermVectorsConsumer，否则termHash为FreqProxTermsWriter，其nextTermHash为SortingTermVectorsConsumer。无论indexSort是否存在，termsHash都是FreqProxTermsWriter，其addField方法为</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> TermsHashPerField <span class="title">addField</span><span class="params">(FieldInvertState invertState, FieldInfo fieldInfo)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> FreqProxTermsWriterPerField(invertState, <span class="keyword">this</span>, fieldInfo, nextTermsHash.addField(invertState, fieldInfo));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>addField方法是创建FreqProxTermsWriterPerField，注意到这里仍然会调用nextTermsHash.addField(invertState, fieldInfo)来为nextTermsHash的addField创建TermsHashPerField，无论是SortingTermVectorsConsumer还是TermVectorsConsumer，其addField都是创建一个TermVectorsConsumerPerField。FreqProxTermsWriterPerField和TermVectorsConsumerPerField我们已经非常熟悉了，他们是实现倒排索引的内存存储。</p>
+<p>退回到processField，perField创建之后就是调用perField的invert方法了，也就是精髓所在了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Inverts one field for one document; first is true</span></span><br><span class="line"><span class="comment"> *  if this is the first time we are seeing this field</span></span><br><span class="line"><span class="comment"> *  name in this document. */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">invert</span><span class="params">(IndexableField field, <span class="keyword">boolean</span> first)</span> <span class="keyword">throws</span> IOException, AbortingException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (first) &#123;</span><br><span class="line">    <span class="comment">// First time we're seeing this field (indexed) in</span></span><br><span class="line">    <span class="comment">// this document:</span></span><br><span class="line">    <span class="comment">//如果当前field是第一次见到，则重置invertState</span></span><br><span class="line">    invertState.reset();</span><br><span class="line">  &#125;</span><br><span class="line">	<span class="comment">//得到该field的fieldType</span></span><br><span class="line">  IndexableFieldType fieldType = field.fieldType();</span><br><span class="line">  <span class="comment">//得到IndexOption</span></span><br><span class="line">  IndexOptions indexOptions = fieldType.indexOptions();</span><br><span class="line">  fieldInfo.setIndexOptions(indexOptions);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (fieldType.omitNorms()) &#123;</span><br><span class="line">    fieldInfo.setOmitsNorms();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">boolean</span> analyzed = fieldType.tokenized() &amp;&amp; docState.analyzer != <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">  <span class="comment">/*</span></span><br><span class="line"><span class="comment">   * To assist people in tracking down problems in analysis components, we wish to write the field name to the infostream</span></span><br><span class="line"><span class="comment">   * when we fail. We expect some caller to eventually deal with the real exception, so we don't want any 'catch' clauses,</span></span><br><span class="line"><span class="comment">   * but rather a finally that takes note of the problem.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="keyword">boolean</span> succeededInProcessingField = <span class="keyword">false</span>;</span><br><span class="line">  <span class="comment">// tokenStream由IndexableField自己实现，只需要返回TokenStream即可使用</span></span><br><span class="line">  <span class="keyword">try</span> (TokenStream stream = tokenStream = field.tokenStream(docState.analyzer, tokenStream)) &#123;</span><br><span class="line">    <span class="comment">// reset the TokenStream to the first token</span></span><br><span class="line">    stream.reset();</span><br><span class="line">    <span class="comment">//设置invertState的attributeSource为这个TokenStream</span></span><br><span class="line">    invertState.setAttributeSource(stream);</span><br><span class="line">    <span class="comment">//将该field交由termsHashPerField处理</span></span><br><span class="line">    termsHashPerField.start(field, first);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (stream.incrementToken()) &#123;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// If we hit an exception in stream.next below</span></span><br><span class="line">      <span class="comment">// (which is fairly common, e.g. if analyzer</span></span><br><span class="line">      <span class="comment">// chokes on a given document), then it's</span></span><br><span class="line">      <span class="comment">// non-aborting and (above) this one document</span></span><br><span class="line">      <span class="comment">// will be marked as deleted, but still</span></span><br><span class="line">      <span class="comment">// consume a docID</span></span><br><span class="line"></span><br><span class="line">      <span class="keyword">int</span> posIncr = invertState.posIncrAttribute.getPositionIncrement();</span><br><span class="line">      <span class="comment">//下面大段都是在更新invertState的状态</span></span><br><span class="line">      invertState.position += posIncr;</span><br><span class="line">      <span class="keyword">if</span> (invertState.position &lt; invertState.lastPosition) &#123;</span><br><span class="line">        <span class="keyword">if</span> (posIncr == <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"first position increment must be &gt; 0 (got 0) for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (posIncr &lt; <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position increment must be &gt;= 0 (got "</span> + posIncr + <span class="string">") for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position overflowed Integer.MAX_VALUE (got posIncr="</span> + posIncr + <span class="string">" lastPosition="</span> + invertState.lastPosition + <span class="string">" position="</span> + invertState.position + <span class="string">") for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (invertState.position &gt; IndexWriter.MAX_POSITION) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"position "</span> + invertState.position + <span class="string">" is too large for field '"</span> + field.name() + <span class="string">"': max allowed position is "</span> + IndexWriter.MAX_POSITION);</span><br><span class="line">      &#125;</span><br><span class="line">      invertState.lastPosition = invertState.position;</span><br><span class="line">      <span class="keyword">if</span> (posIncr == <span class="number">0</span>) &#123;</span><br><span class="line">        invertState.numOverlap++;</span><br><span class="line">      &#125;</span><br><span class="line">          </span><br><span class="line">      <span class="keyword">int</span> startOffset = invertState.offset + invertState.offsetAttribute.startOffset();</span><br><span class="line">      <span class="keyword">int</span> endOffset = invertState.offset + invertState.offsetAttribute.endOffset();</span><br><span class="line">      <span class="keyword">if</span> (startOffset &lt; invertState.lastStartOffset || endOffset &lt; startOffset) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"startOffset must be non-negative, and endOffset must be &gt;= startOffset, and offsets must not go backwards "</span></span><br><span class="line">                                           + <span class="string">"startOffset="</span> + startOffset + <span class="string">",endOffset="</span> + endOffset + <span class="string">",lastStartOffset="</span> + invertState.lastStartOffset + <span class="string">" for field '"</span> + field.name() + <span class="string">"'"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      invertState.lastStartOffset = startOffset;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        invertState.length = Math.addExact(invertState.length, invertState.termFreqAttribute.getTermFrequency());</span><br><span class="line">      &#125; <span class="keyword">catch</span> (ArithmeticException ae) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"too many tokens for field \""</span> + field.name() + <span class="string">"\""</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      <span class="comment">//System.out.println("  term=" + invertState.termAttribute);</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// If we hit an exception in here, we abort</span></span><br><span class="line">      <span class="comment">// all buffered documents since the last</span></span><br><span class="line">      <span class="comment">// flush, on the likelihood that the</span></span><br><span class="line">      <span class="comment">// internal state of the terms hash is now</span></span><br><span class="line">      <span class="comment">// corrupt and should not be flushed to a</span></span><br><span class="line">      <span class="comment">// new segment:</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//这里就跟上一篇文章接上了，完成了倒排数据的写入</span></span><br><span class="line">        termsHashPerField.add();</span><br><span class="line">      &#125; <span class="keyword">catch</span> (MaxBytesLengthExceededException e) &#123;</span><br><span class="line">        <span class="keyword">byte</span>[] prefix = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">30</span>];</span><br><span class="line">        BytesRef bigTerm = invertState.termAttribute.getBytesRef();</span><br><span class="line">        System.arraycopy(bigTerm.bytes, bigTerm.offset, prefix, <span class="number">0</span>, <span class="number">30</span>);</span><br><span class="line">        String msg = <span class="string">"Document contains at least one immense term in field=\""</span> + fieldInfo.name + <span class="string">"\" (whose UTF8 encoding is longer than the max length "</span> + DocumentsWriterPerThread.MAX_TERM_LENGTH_UTF8 + <span class="string">"), all of which were skipped.  Please correct the analyzer to not produce such terms.  The prefix of the first immense term is: '"</span> + Arrays.toString(prefix) + <span class="string">"...', original message: "</span> + e.getMessage();</span><br><span class="line">        <span class="keyword">if</span> (docState.infoStream.isEnabled(<span class="string">"IW"</span>)) &#123;</span><br><span class="line">          docState.infoStream.message(<span class="string">"IW"</span>, <span class="string">"ERROR: "</span> + msg);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Document will be deleted above:</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(msg, e);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">        <span class="keyword">throw</span> AbortingException.wrap(th);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// trigger streams to perform end-of-stream operations</span></span><br><span class="line">    stream.end();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// <span class="doctag">TODO:</span> maybe add some safety? then again, it's already checked </span></span><br><span class="line">    <span class="comment">// when we come back around to the field...</span></span><br><span class="line">    invertState.position += invertState.posIncrAttribute.getPositionIncrement();</span><br><span class="line">    invertState.offset += invertState.offsetAttribute.endOffset();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* if there is an exception coming through, we won't set this to true here:*/</span></span><br><span class="line">    succeededInProcessingField = <span class="keyword">true</span>;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!succeededInProcessingField &amp;&amp; docState.infoStream.isEnabled(<span class="string">"DW"</span>)) &#123;</span><br><span class="line">      docState.infoStream.message(<span class="string">"DW"</span>, <span class="string">"An exception was thrown while processing field "</span> + fieldInfo.name);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (analyzed) &#123;</span><br><span class="line">    invertState.position += docState.analyzer.getPositionIncrementGap(fieldInfo.name);</span><br><span class="line">    invertState.offset += docState.analyzer.getOffsetGap(fieldInfo.name);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>termsHashPerField.start(field, first)对于FreqProxTermsWriterPerField除了赋值termAttribute和termFreqAttribute没有做额外的事情。TermVectorsConsumerPerField做了更多的事情</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">start</span><span class="params">(IndexableField field, <span class="keyword">boolean</span> first)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.start(field, first);</span><br><span class="line">  <span class="keyword">assert</span> field.fieldType().indexOptions() != IndexOptions.NONE;</span><br><span class="line">  <span class="comment">//如果该field第一次出现</span></span><br><span class="line">  <span class="keyword">if</span> (first) &#123;</span><br><span class="line">    <span class="comment">//重置bytesRefHash</span></span><br><span class="line">    <span class="keyword">if</span> (bytesHash.size() != <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="comment">// Only necessary if previous doc hit a</span></span><br><span class="line">      <span class="comment">// non-aborting exception while writing vectors in</span></span><br><span class="line">      <span class="comment">// this field:</span></span><br><span class="line">      reset();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    bytesHash.reinit();</span><br><span class="line"></span><br><span class="line">    hasPayloads = <span class="keyword">false</span>;</span><br><span class="line">		<span class="comment">//该field的index form是否也需要被存储进term vectors</span></span><br><span class="line">    doVectors = field.fieldType().storeTermVectors();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (doVectors) &#123;</span><br><span class="line">			<span class="comment">//更新TermVectorsConsumer的hasVectors字段</span></span><br><span class="line">      termsWriter.hasVectors = <span class="keyword">true</span>;</span><br><span class="line">			<span class="comment">//field的token positions是否也应该保存进term vectors</span></span><br><span class="line">      doVectorPositions = field.fieldType().storeTermVectorPositions();</span><br><span class="line"></span><br><span class="line">      <span class="comment">// Somewhat confusingly, unlike postings, you are</span></span><br><span class="line">      <span class="comment">// allowed to index TV offsets without TV positions:</span></span><br><span class="line">      <span class="comment">//field的token字符偏移量是否应该保存进term vectors</span></span><br><span class="line">      doVectorOffsets = field.fieldType().storeTermVectorOffsets();</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (doVectorPositions) &#123;</span><br><span class="line">        <span class="comment">//是否保存token payloads</span></span><br><span class="line">        doVectorPayloads = field.fieldType().storeTermVectorPayloads();</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        doVectorPayloads = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">if</span> (field.fieldType().storeTermVectorPayloads()) &#123;</span><br><span class="line">          <span class="comment">// <span class="doctag">TODO:</span> move this check somewhere else, and impl the other missing ones</span></span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"cannot index term vector payloads without term vector positions (field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (field.fieldType().storeTermVectorOffsets()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"cannot index term vector offsets when term vectors are not indexed (field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (field.fieldType().storeTermVectorPositions()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"cannot index term vector positions when term vectors are not indexed (field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (field.fieldType().storeTermVectorPayloads()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"cannot index term vector payloads when term vectors are not indexed (field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (doVectors != field.fieldType().storeTermVectors()) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"all instances of a given field name must have the same term vectors settings (storeTermVectors changed for field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (doVectorPositions != field.fieldType().storeTermVectorPositions()) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"all instances of a given field name must have the same term vectors settings (storeTermVectorPositions changed for field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (doVectorOffsets != field.fieldType().storeTermVectorOffsets()) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"all instances of a given field name must have the same term vectors settings (storeTermVectorOffsets changed for field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (doVectorPayloads != field.fieldType().storeTermVectorPayloads()) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"all instances of a given field name must have the same term vectors settings (storeTermVectorPayloads changed for field=\""</span> + field.name() + <span class="string">"\")"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (doVectors) &#123;</span><br><span class="line">    <span class="keyword">if</span> (doVectorOffsets) &#123;</span><br><span class="line">      <span class="comment">//将fieldState的offsetAttribute引用赋值给offsetAttribute</span></span><br><span class="line">      offsetAttribute = fieldState.offsetAttribute;</span><br><span class="line">      <span class="keyword">assert</span> offsetAttribute != <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (doVectorPayloads) &#123;</span><br><span class="line">      <span class="comment">// Can be null:</span></span><br><span class="line">      <span class="comment">//将fieldState的payloadAttribute引用赋值给payloadAttribute</span></span><br><span class="line">      payloadAttribute = fieldState.payloadAttribute;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      payloadAttribute = <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> doVectors;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>看到这里我们基本上已经跟上一篇文章完全接上了，我们知道了document是怎么将field的各个token给到TermsHashPerField进行处理了，下一篇详细讲解这些内存数据是何时以及怎样写入到文件系统的。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="tag"># 源码解析</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/18/Lucene%E5%86%85%E5%AD%98%E5%80%92%E6%8E%92%E7%B4%A2%E5%BC%95%E5%AD%98%E5%82%A8%E5%AE%9E%E7%8E%B0/" rel="next" title="Lucene内存倒排索引存储实现">
+                <i class="fa fa-chevron-left"></i> Lucene内存倒排索引存储实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Joe Hou</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joe Hou</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
